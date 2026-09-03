@@ -1,0 +1,367 @@
+{
+  "schema": "relay-adoption-evidence/v1",
+  "decision_document": "DECISION.md",
+  "rule": "Every material DECISION.md assertion cites one or more D-* claim IDs. Each ID has one evidence strength, publication-resolvable supporting anchors, a falsifier, a probe, and a gap.",
+  "claims": [
+    {
+      "id": "D-001",
+      "strength": "INFERRED",
+      "claim": "An in-tree declarative contract layer over the current transport is the best-supported direction because four observed replication-responsibility classes occupy distinct source sites, one real receiver omission is independently source-proven, the approach adds no external runtime dependency, and it can be cut over per family.",
+      "supports": [
+        {"artifact_id":"MULTIVOID-CURRENT-MODEL.md","locator":"MULTIVOID-CURRENT-MODEL.md:15-21,66-82"},
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:23-41"}
+      ],
+      "falsifier": "A bounded prototype cannot represent a current family, fails to detect an omitted required site, adds more wiring than it removes, or requires an external runtime dependency.",
+      "probe": "Shadow-declare one bounded family, inject missing registration/receiver/replay/cleanup cases, compare parity, then remove the replaced manual path.",
+      "gap": "The four cited ranges do not establish payload-validation, refan, engine-wrapper or feature-state-machine sites and do not define a complete add-path or declaration universe. No contract schema, generator, prototype, schedule, or accepted upstream design exists."
+    },
+    {
+      "id": "D-002",
+      "strength": "INFERRED",
+      "claim": "The contract-layer choice is not evidence of a backlog-wide fix: only three ledger identities have inferred help and 45 causally unresolved outcome rows have all four option cells unknown; six envelope identities are neutral.",
+      "supports": [
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:3-11,31-105"},
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:23-29,90-105"}
+      ],
+      "falsifier": "A validated reclassification or controlled option result produces broader demonstrated help.",
+      "probe": "Group the pinned 216 cells by verdict/strength and distinguish administrative envelopes from outcome rows.",
+      "gap": "The 2026-09-04 six-envelope intake is outside the frozen universe; unknown does not mean unhelpable."
+    },
+    {
+      "id": "D-003",
+      "strength": "UNKNOWN",
+      "claim": "Relay project licence adequacy for modification, redistribution and derived use is not established.",
+      "supports": [
+        {"artifact_id":"RELAY-PUBLIC-SURFACE.md","locator":"RELAY-PUBLIC-SURFACE.md:43-67"},
+        {"artifact_id":"RELAY-PUBLIC-SURFACE.md","locator":"RELAY-PUBLIC-SURFACE.md:61-67"}
+      ],
+      "falsifier": "An applicable grant for the intended use is produced and accepted by legal review.",
+      "probe": "Inventory and read all conventional licence/notice paths and references in the pinned tree.",
+      "gap": "A grant may exist outside the pin; this is not legal advice."
+    },
+    {
+      "id": "D-004",
+      "strength": "UNKNOWN",
+      "claim": "Relay's critical native behavioral invariants are neither inspectable from corresponding source nor independently black-box qualified at the pin.",
+      "supports": [
+        {"artifact_id":"RELAY-IMPLEMENTATION-CONFIDENCE.md","locator":"RELAY-IMPLEMENTATION-CONFIDENCE.md:3-34"},
+        {"artifact_id":"RELAY-IMPLEMENTATION-CONFIDENCE.md","locator":"RELAY-IMPLEMENTATION-CONFIDENCE.md:13-34"}
+      ],
+      "falsifier": "Corresponding readable implementation source or independent exact-version runtime results establish the required invariants.",
+      "probe": "Classify every public/static claim by evidence strength and search for source-proven or runtime-observed core behavior.",
+      "gap": "Static absence does not show a mechanism is false."
+    },
+    {
+      "id": "D-005",
+      "strength": "UNKNOWN",
+      "claim": "The complete Relay player package, API, wire and rule-version contract is not reproducible or stability-qualified from the public pin.",
+      "supports": [
+        {"artifact_id":"RELAY-PUBLIC-SURFACE.md","locator":"RELAY-PUBLIC-SURFACE.md:5-31,43-59"},
+        {"artifact_id":"PILOT-DESIGN.md","locator":"PILOT-DESIGN.md:21-25"}
+      ],
+      "falsifier": "Exact player artifact provenance, reproducible build inputs, native constants, compatibility policy and mismatch tests are supplied.",
+      "probe": "Compare manifest/docs/version strings/checksums/build inputs and define mismatch cases.",
+      "gap": "No Relay binary was executed."
+    },
+    {
+      "id": "D-006",
+      "strength": "INFERRED",
+      "claim": "No current Relay-backed Multivoid subsystem has evidence of an implemented non-dual-authority path.",
+      "supports": [
+        {"artifact_id":"OVERLAP-AND-COLLISION-MAP.md","locator":"OVERLAP-AND-COLLISION-MAP.md:26-46"},
+        {"artifact_id":"OVERLAP-AND-COLLISION-MAP.md","locator":"OVERLAP-AND-COLLISION-MAP.md:3-24"}
+      ],
+      "falsifier": "A reviewed manifest and trace show one enroller, writer, seed source and materializer for every object/state/transition in a bounded namespace.",
+      "probe": "Map each active ownership surface and require the other system to be disabled or disjoint.",
+      "gap": "This is lack of qualifying evidence, not proof that integration is impossible."
+    },
+    {
+      "id": "D-007",
+      "strength": "INFERRED",
+      "claim": "The prospective pilot design has objective preflight, acceptance, stop and rollback gates, but none has been executed.",
+      "supports": [
+        {"artifact_id":"PILOT-DESIGN.md","locator":"PILOT-DESIGN.md:17-45"},
+        {"artifact_id":"PILOT-DESIGN.md","locator":"PILOT-DESIGN.md:17-37"}
+      ],
+      "falsifier": "A required unknown lacks a gate, or a completed independent gate packet exists.",
+      "probe": "Map each critical unknown and collision control to an objective pass/stop/rollback condition.",
+      "gap": "A plan is not runtime evidence."
+    },
+    {
+      "id": "D-008",
+      "strength": "UNKNOWN",
+      "claim": "It is not established that broad Relay migration removes more duplicated risk than it introduces.",
+      "supports": [
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:62-86"},
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:90-105"},
+        {"artifact_id":"RELAY-PUBLIC-SURFACE.md","locator":"RELAY-PUBLIC-SURFACE.md:43-67"}
+      ],
+      "falsifier": "A complete design/prototype quantifies greater risk removal with qualified behavior and bounded new failure modes.",
+      "probe": "Compare measured duplicated ownership removed with dependency, package, bridge, dual-stack and rollback risks.",
+      "gap": "No broad design, implementation or controlled result exists."
+    },
+    {
+      "id": "D-009",
+      "strength": "UNKNOWN",
+      "claim": "Upstream acceptance is unknown for every option; Relay-backed options add unresolved dependency and packaging decisions.",
+      "supports": [
+        {"artifact_id":"PINNED-SOURCES.json","locator":"PINNED-SOURCES.json:4-28"}
+      ],
+      "falsifier": "Pinned upstream policy, accepted design, issue, pull request or maintainer decision directly addresses the option.",
+      "probe": "Inspect pinned contribution, build, release and dependency-policy surfaces without maintainer contact.",
+      "gap": "General contribution instructions do not predict acceptance."
+    },
+    {
+      "id": "D-010",
+      "strength": "UNKNOWN",
+      "claim": "Nine Relay critical unknowns remain: licence; corresponding source/completeness; reproducible native build; supported player distribution/authenticity; API/net/schema compatibility; dependency coexistence; lawful continuity; native-C++ to Blueprint/rule integration and gameplay-pak need; upstream acceptance.",
+      "supports": [
+        {"artifact_id":"PILOT-DESIGN.md","locator":"PILOT-DESIGN.md:17-37"}
+      ],
+      "falsifier": "Each named item receives the evidence required by its source gate.",
+      "probe": "Read and preserve every Relay critical-unknown record without collapsing dimensions.",
+      "gap": "Future evidence can close individual items; none is assumed closed by this decision."
+    },
+    {
+      "id": "D-011",
+      "strength": "INFERRED",
+      "claim": "A small isolated confirmed fix proven compatible with the contract direction should not wait.",
+      "supports": [
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:11-41"},
+        {"artifact_id":"MULTIVOID-CURRENT-MODEL.md","locator":"MULTIVOID-CURRENT-MODEL.md:15-21,66-82"}
+      ],
+      "falsifier": "The fix changes a shared authority/identity/wire/save contract or conflicts with the selected layer.",
+      "probe": "Perform a diff-scoped compatibility review and exact regression test before merge.",
+      "gap": "No specific patch is approved by this architecture artifact."
+    },
+    {
+      "id": "D-012",
+      "strength": "INFERRED",
+      "claim": "Broad repetitive implementation across the whole bug backlog should wait for causal classification and the contract-layer prototype.",
+      "supports": [
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:90-105"},
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:23-41,82-90"}
+      ],
+      "falsifier": "The backlog receives independent causal diagnoses showing unrelated isolated defects or the prototype fails its falsifier.",
+      "probe": "Classify each outcome and compare repetition with a bounded contract prototype before bulk implementation.",
+      "gap": "The frozen ledger excludes the 2026-09-04 intake."
+    },
+    {
+      "id": "D-013",
+      "strength": "INFERRED",
+      "claim": "Option 1 retains all current architecture, replaces only exact diagnosed feature code, adds no Relay dependency, uses per-fix tests/package updates and is locally reversible before wire/data cutover.",
+      "supports": [
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:11-21"},
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:11-21"}
+      ],
+      "falsifier": "A class fix necessarily changes architecture-wide ownership or an external dependency.",
+      "probe": "Trace each concrete patch and its tests/package/data effects.",
+      "gap": "No set of class fixes was supplied, so total cost and replaced code are unknown."
+    },
+    {
+      "id": "D-014",
+      "strength": "UNKNOWN",
+      "claim": "Option 1 has no demonstrated help cell, and its key risk is continued repeated multi-site wiring while causal diagnoses remain sparse.",
+      "supports": [
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:90-105"},
+        {"artifact_id":"MULTIVOID-CURRENT-MODEL.md","locator":"MULTIVOID-CURRENT-MODEL.md:15-21,66-82"}
+      ],
+      "falsifier": "A concrete class patch changes a frozen outcome, or diagnoses show the backlog is predominantly isolated logic.",
+      "probe": "Test row-specific patches and aggregate only controlled outcomes.",
+      "gap": "No demonstrated help does not mean the option cannot help."
+    },
+    {
+      "id": "D-015",
+      "strength": "INFERRED",
+      "claim": "Option 2 retains transport/save/materialization ownership, replaces manual contract wiring per family after shadow parity, adds no external runtime dependency, keeps the player package Relay-free and supports per-family backout.",
+      "supports": [
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:23-41"},
+        {"artifact_id":"OVERLAP-AND-COLLISION-MAP.md","locator":"OVERLAP-AND-COLLISION-MAP.md:3-46"}
+      ],
+      "falsifier": "Implementation requires a second transport/materializer, external runtime, or non-reversible all-at-once cutover.",
+      "probe": "Shadow one family, compare parity, cut over one authority, remove old path, and exercise rollback.",
+      "gap": "Concrete schema, generated surface and cost are unknown."
+    },
+    {
+      "id": "D-016",
+      "strength": "INFERRED",
+      "claim": "Option 2 plausibly helps three ledger identities representing two independent verified outcomes through MATERIALIZATION and TRANSITIONS contracts; all other outcome leverage is unknown.",
+      "supports": [
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:23-29,31-105"},
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:23-29,90-105"}
+      ],
+      "falsifier": "The declarations cannot observe/control the outcomes, or controlled root-cause evidence assigns another class.",
+      "probe": "Prototype narrow postconditions against the exact verified content-view and paired-presentation outcomes.",
+      "gap": "No contract layer was run; the help cells remain inferred."
+    },
+    {
+      "id": "D-017",
+      "strength": "INFERRED",
+      "claim": "Option 2 risks abstraction mismatch, temporary dual paths and broad review cost; upstream acceptance and implementation cost remain unknown, and prototype failure would make the choice wrong.",
+      "supports": [
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:23-41,82-90"},
+        {"artifact_id":"PINNED-SOURCES.json","locator":"PINNED-SOURCES.json:4-28"}
+      ],
+      "falsifier": "A prototype fails coverage/omission/parity/backout gates or diagnoses show no repeated contract burden.",
+      "probe": "Run the bounded prototype and review a concrete upstream design.",
+      "gap": "No prototype or maintainer decision exists."
+    },
+    {
+      "id": "D-018",
+      "strength": "INFERRED",
+      "claim": "Option 3 retains Multivoid broadly, gives one disjoint target to Relay after qualification, and adds mandatory Relay player artifacts, a rule profile and an unresolved bridge/package surface.",
+      "supports": [
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:43-60"},
+        {"artifact_id":"RELAY-PUBLIC-SURFACE.md","locator":"RELAY-PUBLIC-SURFACE.md:5-23"}
+      ],
+      "falsifier": "A genuine Relay pilot requires none of those player artifacts/rules/bridge boundaries.",
+      "probe": "Inventory the complete exact pilot dependency and ensure the target namespace is disjoint.",
+      "gap": "Bridge and gameplay-pak needs remain unknown."
+    },
+    {
+      "id": "D-019",
+      "strength": "UNKNOWN",
+      "claim": "Option 3 has no demonstrated bug-help cell and carries licence, opaque behavior, version, dual-stack, coexistence and upstream unknowns.",
+      "supports": [
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:90-105"},
+        {"artifact_id":"PILOT-DESIGN.md","locator":"PILOT-DESIGN.md:17-45"}
+      ],
+      "falsifier": "Exact-version pilot results demonstrate row-specific help and close every applicable gate.",
+      "probe": "Execute only the authorized gate plan with independent review.",
+      "gap": "No pilot was run; no impossibility is claimed."
+    },
+    {
+      "id": "D-020",
+      "strength": "INFERRED",
+      "claim": "Option 3 must proceed from preflight through a disjoint canary, mismatch/non-dual/behavior/performance gates and Relay-free rollback; failure of a required gate makes it the wrong current choice.",
+      "supports": [
+        {"artifact_id":"PILOT-DESIGN.md","locator":"PILOT-DESIGN.md:39-45"},
+        {"artifact_id":"PILOT-DESIGN.md","locator":"PILOT-DESIGN.md:17-45"}
+      ],
+      "falsifier": "All gates pass and the qualified benefit exceeds the in-tree alternative's result.",
+      "probe": "Apply G01-G17 in PILOT-DESIGN.md and promote only exact passed behavior.",
+      "gap": "Plan execution and authorized environment are outside this audit."
+    },
+    {
+      "id": "D-021",
+      "strength": "INFERRED",
+      "claim": "Option 4 would retain gameplay/save integration not supplied by Relay, broadly replace transport/replication ownership, add mandatory opaque player artifacts and cross-peer version/rule lockstep, and cross wire/authority/persistence rollback boundaries.",
+      "supports": [
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:62-80"},
+        {"artifact_id":"RELAY-PUBLIC-SURFACE.md","locator":"RELAY-PUBLIC-SURFACE.md:5-23,43-67"}
+      ],
+      "falsifier": "A complete broad design demonstrates a smaller source-reproducible surface without those retained responsibilities or cutover boundaries.",
+      "probe": "Map each Multivoid owner to Relay's documented inclusion/exclusion and package contract.",
+      "gap": "No broad design or buildable diff exists."
+    },
+    {
+      "id": "D-022",
+      "strength": "UNKNOWN",
+      "claim": "Option 4 has no demonstrated bug-help cell and no evidence that its migration risk is favourable.",
+      "supports": [
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:90-105"},
+        {"artifact_id":"RELAY-IMPLEMENTATION-CONFIDENCE.md","locator":"RELAY-IMPLEMENTATION-CONFIDENCE.md:3-34"}
+      ],
+      "falsifier": "Qualified broad evidence demonstrates row-specific help and net risk reduction.",
+      "probe": "Run representative migration and failure tests only after prerequisites close.",
+      "gap": "Unknown help is not no possible help."
+    },
+    {
+      "id": "D-023",
+      "strength": "INFERRED",
+      "claim": "Option 4 would require staged ownership replacement, full regression/mismatch/save/rejoin/load tests and converter-backed rollback; any unresolved broad-decision gate makes it the wrong current choice.",
+      "supports": [
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:62-80"},
+        {"artifact_id":"OVERLAP-AND-COLLISION-MAP.md","locator":"OVERLAP-AND-COLLISION-MAP.md:26-46"}
+      ],
+      "falsifier": "Every decision-rule prerequisite closes and a representative migration passes acceptance and reverse conversion.",
+      "probe": "Evaluate all eight broad-decision gates and exercise forward/back conversion before expansion.",
+      "gap": "None of the migration artifacts or runtime results exists."
+    },
+    {
+      "id": "D-024",
+      "strength": "SOURCE_PROVEN",
+      "claim": "Multivoid clients write a validated host save to an ephemeral slot, invoke the native save boot path, then signal world-ready; save-created actors are bound/adopted, and stable keys, actor expressions, EIDs, peers and per-player inventory ownership remain distinct implementation domains.",
+      "supports": [
+        {"artifact_id":"multivoid","commit":"f690c017e8e55f2996d0e9121956aae66486742e","locator":"src/votv-coop/src/coop/save/save_transfer.cpp:281-371; src/votv-coop/src/harness/session_runtime.cpp:359-373; src/votv-coop/src/ue_wrap/engine/engine_save.cpp:401-413; src/votv-coop/src/coop/session/net_pump.cpp:563-609; src/votv-coop/src/coop/props/save_identity_bind.cpp:94-175"},
+        {"artifact_id":"multivoid","commit":"f690c017e8e55f2996d0e9121956aae66486742e","locator":"src/votv-coop/include/coop/element/element.h:86-117; src/votv-coop/include/coop/element/registry.h:53-141; src/votv-coop/include/coop/net/peer_identity.h:1-54; src/votv-coop/include/coop/props/prop_synth_key.h:1-27; src/votv-coop/src/coop/items/player_inventory_sync.cpp:64-87,314-334"}
+      ],
+      "falsifier": "The pinned client world is instead wholly created from a server-owned element tree.",
+      "probe": "Trace save transfer/load, ready edge, actor binding and identity maps.",
+      "gap": "Native game loader internals and every entity family are not covered.",
+      "lineage": {
+        "relative_to_round_1": "EXPANDED_IN_ROUND_2",
+        "round_1_factual_core": "Clients use native save load and bind/adopt save-created actors.",
+        "new_or_expanded_clauses": [
+          "Host save bytes are validated before being written.",
+          "The client write target is an ephemeral slot.",
+          "Native save boot precedes the client world-ready signal.",
+          "Stable authored/save keys, transient actor expressions, session EIDs and peer identity are distinct identity domains.",
+          "Per-player inventory/save ownership is a fifth ownership domain rather than an object identity."
+        ],
+        "support_boundary": "Each new or expanded clause is covered by the direct pinned ranges in this D-024 record; the architecture conclusion remains separately downgraded to INFERRED D-029."
+      }
+    },
+    {
+      "id": "D-029",
+      "strength": "INFERRED",
+      "claim": "A viable Multivoid model must preserve hybrid bind/adopt/materialize behavior and keep its identity and ownership domains independent.",
+      "supports": [
+        {"artifact_id":"MULTIVOID-CURRENT-MODEL.md","locator":"MULTIVOID-CURRENT-MODEL.md:23-64"},
+        {"artifact_id":"OVERLAP-AND-COLLISION-MAP.md","locator":"OVERLAP-AND-COLLISION-MAP.md:3-46"}
+      ],
+      "falsifier": "A concrete alternative preserves native-save boot, materialization and every named identity/ownership distinction without a hybrid boundary or independent contracts.",
+      "probe": "Apply the ten-axis model to the pinned session, save, element, lifecycle and inventory paths.",
+      "gap": "This is an architecture judgment; it does not select a schema syntax or generator."
+    },
+    {
+      "id": "D-025",
+      "strength": "INFERRED",
+      "claim": "MTA concepts transfer only with adaptation: its identity indirection and server-driven initial data stream are useful references, while its server-created root/resource tree is not a direct model for VotV native-save boot.",
+      "supports": [
+        {"artifact_id":"mta","commit":"cc3b35dee5ca1e3cd88b9a1468800b2dbcedfb2f","locator":"Server/mods/deathmatch/logic/CElement.cpp:36-44; Server/mods/deathmatch/logic/CElementIDs.cpp:23-55; Server/mods/deathmatch/logic/CMapManager.cpp:51-64; Server/mods/deathmatch/logic/CResource.cpp:900-925; Server/mods/deathmatch/logic/CGame.cpp:1396-1433,1514-1518"},
+        {"artifact_id":"multivoid","commit":"f690c017e8e55f2996d0e9121956aae66486742e","locator":"src/votv-coop/src/coop/save/save_transfer.cpp:281-371; src/votv-coop/src/harness/session_runtime.cpp:359-373"}
+      ],
+      "falsifier": "A direct transplantation preserves native-save identity/materialization and ownership without adaptation.",
+      "probe": "Compare pinned MTA element/resource lifecycles to Multivoid save and actor binding.",
+      "gap": "MTA is a conceptual reference, not an implementation dependency."
+    },
+    {
+      "id": "D-026",
+      "strength": "INFERRED",
+      "claim": "The migration-analysis chat scope and pilot-design disjoint-canary scope answer different questions; the canary is selected first, while chat remains a later candidate after publication-resolvable wire-test evidence is supplied.",
+      "supports": [
+        {"artifact_id":"MIGRATION-SURFACE.md","locator":"MIGRATION-SURFACE.md:43-60"},
+        {"artifact_id":"PILOT-DESIGN.md","locator":"PILOT-DESIGN.md:5-58"}
+      ],
+      "falsifier": "Chat is proven fully isolated and better covers the first qualification controls, or a canary cannot cover them.",
+      "probe": "Compare scope, existing test surface and non-dual coverage.",
+      "gap": "The exact migration-unit membership and chat wire-test search record are not in the artifact set; neither target was implemented or run."
+    },
+    {
+      "id": "D-027",
+      "strength": "INFERRED",
+      "claim": "The overlap analysis's current non-certification and the pilot design's prospective certification plan are retained as distinct temporal findings.",
+      "supports": [
+        {"artifact_id":"OVERLAP-AND-COLLISION-MAP.md","locator":"OVERLAP-AND-COLLISION-MAP.md:26-56"},
+        {"artifact_id":"PILOT-DESIGN.md","locator":"PILOT-DESIGN.md:17-45"}
+      ],
+      "falsifier": "A passed certificate already exists or the plan contains no non-dual gate.",
+      "probe": "Compare present evidence with prospective gate semantics without averaging them.",
+      "gap": "No gate result exists."
+    },
+    {
+      "id": "D-028",
+      "strength": "INFERRED",
+      "claim": "The prior rejection's claim-strength findings are closed by the 54-row corrected matrix, downgraded cells, removal of invented Drive Box declarations, replacement of defective citations and explicit preservation of the open six-envelope scope limit.",
+      "supports": [
+        {"artifact_id":"PRIOR-REVIEW-CLOSURE.md","sha256":"02809E97E19B76D44BFE6B3D39178BBF4D454F8C6635AAA8591123E17F77D1EA","locator":"PRIOR-REVIEW-CLOSURE.md:1-78"},
+        {"artifact_id":"BUG-APPLICABILITY-MATRIX.md","locator":"BUG-APPLICABILITY-MATRIX.md:3-11,31-109"},
+        {"artifact_id":"published-bug-ledger","sha256":"A2A1671C3A39F9C61F16F29725300C758E1AD096776F2F3254743C5A1E05A32F","locator":"BUG-LEDGER.md:3-33,37-92"}
+      ],
+      "falsifier": "Any rejected claim/citation is reused, a frozen identity is absent/duplicated, or the scope limit is described as closed.",
+      "probe": "Check each restated correction item in the publication-contained closure record against current documents and mechanically compare row identities.",
+      "gap": "The six 2026-09-04 capture envelopes remain open pending an addendum."
+    }
+  ]
+}

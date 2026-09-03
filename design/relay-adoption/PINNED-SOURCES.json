@@ -1,0 +1,48 @@
+{
+  "schema": "relay-adoption-pins/v1",
+  "generated_utc": "2026-09-03T21:22:46Z",
+  "repositories": [
+    {
+      "id": "multivoid",
+      "repository": "VOTV-MP/Multivoid",
+      "commit": "f690c017e8e55f2996d0e9121956aae66486742e",
+      "role": "current implementation and tests"
+    },
+    {
+      "id": "relay",
+      "repository": "modestimpala/Relay",
+      "commit": "e5d3d59c42e8aca7f38e79b77145d6d46de770d8",
+      "role": "candidate framework surface and static package"
+    },
+    {
+      "id": "libvotv",
+      "repository": "modestimpala/libvotv",
+      "commit": "04bc63b3f98ba32edb064342b034c74d24fe2c81",
+      "role": "candidate helper and schema source"
+    },
+    {
+      "id": "mta",
+      "repository": "multitheftauto/mtasa-blue",
+      "commit": "cc3b35dee5ca1e3cd88b9a1468800b2dbcedfb2f",
+      "role": "conceptual multiplayer reference"
+    }
+  ],
+  "evidence_inputs": [
+    {"id": "published-bug-ledger", "path": "BUG-LEDGER.md", "sha256": "A2A1671C3A39F9C61F16F29725300C758E1AD096776F2F3254743C5A1E05A32F", "identity_rows": 54, "scope_limit": "Excludes the six capture envelopes received on 2026-09-04 and identities arising from them; an addendum is required for current-intake completeness."}
+  ],
+  "artifact_set": [
+    "BUG-APPLICABILITY-MATRIX.md",
+    "BUG-LEDGER.md",
+    "DECISION.md",
+    "EVIDENCE-MANIFEST.json",
+    "LIBVOTV-ADOPTION-MATRIX.md",
+    "MIGRATION-SURFACE.md",
+    "MULTIVOID-CURRENT-MODEL.md",
+    "OVERLAP-AND-COLLISION-MAP.md",
+    "PILOT-DESIGN.md",
+    "PINNED-SOURCES.json",
+    "PRIOR-REVIEW-CLOSURE.md",
+    "RELAY-IMPLEMENTATION-CONFIDENCE.md",
+    "RELAY-PUBLIC-SURFACE.md"
+  ]
+}
