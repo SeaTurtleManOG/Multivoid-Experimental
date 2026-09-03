@@ -1,7 +1,6 @@
 # Audit-prompt template — performance / hot-path re-entry section
 
-Paste this section into every `feature-dev:code-reviewer` brief AND
-every `testing-performance-benchmarker` brief, in addition to the
+Include this section in performance-sensitive review briefs, in addition to the
 existing focus areas (RULE 1/2/3 crutch hunt, MTA fidelity, file-size
 check per `[[feedback-modular-file-size-rule]]`, thread-safety,
 correctness).
