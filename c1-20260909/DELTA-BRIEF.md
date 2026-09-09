@@ -10,7 +10,7 @@ as results land; every sha below was pasted from git output in this session.
 | upstream main (VOTV-MP) | 3af5ddae (2026-09-08, proto 152) | FORCE-REWRITTEN since f690c017; b150 tag not an ancestor; no b151/b152 release; tools/ tree deleted upstream, CI gates moved to .github/ci/ |
 | b150 release tag | ba6d8c39 (proto 150) | what players run; code-identical to f690c017 except the version constant |
 | private/b150-aligned | 998c43b6 | reviewed NOT_CLEAN on packaging provenance only; untouched |
-| private/b150-aligned-fixes | **e2277707** | 998c43b6 + four clean cherry-picks (39c1fb88, e917477f, 653be7cc, d437aefc; blob-verified) + the C01 gate (f4624265, 413c3d06, ece4d354; clean) + candidate 8 (e4191f3b, f1d22695 [one comment-only conflict in prop_drop_intent.cpp resolved: b150 comment kept, fix code taken], c3706d9c, 0061c852, a557a7cf, e2277707). All nine new picks verified code-identical to their originals with comments stripped; protocol.h blob unchanged. Checked out in S:\GAMEMODDING\Multivoid-Private-B150. Rebuild at e2277707 EXIT=0 (2026-09-09 08:06:33Z): main.dll sha256 58d0d365fc99eb1611c67f3487dfb07ee726efdf61fb7ba74b96b50afd528b89 (18299392 bytes), embeds MULTIVOID_SOURCE_COMMIT=e22777072ca89d4b604e0b3218044a03b8955cba; policy selftest PASS/PASS/PASS; drills running (log C1\EVIDENCE\drills-b150-aligned-fixes-e2277707.log). This is the rig-test candidate. |
+| private/b150-aligned-fixes | **e2277707** | 998c43b6 + four clean cherry-picks (39c1fb88, e917477f, 653be7cc, d437aefc; blob-verified) + the C01 gate (f4624265, 413c3d06, ece4d354; clean) + candidate 8 (e4191f3b, f1d22695 [one comment-only conflict in prop_drop_intent.cpp resolved: b150 comment kept, fix code taken], c3706d9c, 0061c852, a557a7cf, e2277707). All nine new picks verified code-identical to their originals with comments stripped; protocol.h blob unchanged. Checked out in S:\GAMEMODDING\Multivoid-Private-B150. Rebuild at e2277707 EXIT=0 (2026-09-09 08:06:33Z): main.dll sha256 58d0d365fc99eb1611c67f3487dfb07ee726efdf61fb7ba74b96b50afd528b89 (18299392 bytes), embeds MULTIVOID_SOURCE_COMMIT=e22777072ca89d4b604e0b3218044a03b8955cba; policy selftest PASS/PASS/PASS; drills ALL EXIT 0 at 2026-09-09 08:37:09Z (build_identity 121 fired/passed 0 failed; provenance 10/10; git-failure 5/5; log C1\EVIDENCE\drills-b150-aligned-fixes-e2277707.log). This is the rig-test candidate; NOT deployed (operator not ready). |
 | fix/retarget-3af5ddae | 48497664 | REVIEWED CLEAN (fresh Opus reviewer): four picks code-identical, harness 10/10 with a negative control built from 3af5ddae's pre-fix blob, standalone runner both arms, protocol.h identical blob. Worktree C1\WORKTREES\retarget-upstream |
 | fix/c01-keyed-destroy-gate | a482a5d7 | REVIEWED CLEAN twice (two fresh reviewers, 0 blocking). Worktree C1\WORKTREES\fix-c01 |
 | fix/place-queue-admission | d8cd3c1e | REVIEWED CLEAN after two comment-only respins (125f174c → 4d6e8437 → d8cd3c1e); shape authorisation = orchestrator adjudication (eviction accepted, below). Worktree C1\WORKTREES\fix-cand08 |
@@ -75,6 +75,20 @@ client object duplication → FPS collapse (several); inventory replaced by host
    host; four omission cases with no named assertion. Core host-local park idea upheld. Round 2
    (fresh author → two fresh lenses → reconciler) launched 2026-09-09 after the reset; revision file
    `C1\LANES\bug017-design\BUG017-CONTRACT-DESIGN-R2.md`, verdict `VERDICT-R2.md`.
+   **Round 2 result (2026-09-09):** reconciled verdict **DESIGN_NOT_CLEAN, implementation_go=false**,
+   but RB-1, RB-2, RB-3, RB-4, RB-6, RB-7 are CLOSED in the source (both lenses agree; one lens
+   returned DESIGN_CLEAN outright). Four bounded blockers remain for round 3: (1) A2's pass criterion
+   "zero [CUSTODY] lines of any kind" is unsatisfiable because the C01 husk destroy reaches the
+   capture point and emits an expected `not-container` refusal on the control chain — restate as
+   zero park/arm/apply lines with that refusal allowed; (2) nested-container slot staleness (a
+   preserved inner ints[0][0] can name stale inner contents; needs a liveness rule or an explicit
+   refusal); (3) §2.5 row 10's live-container enumeration has an unstated buffer contract
+   (fail-open when the world holds more containers than the caller's buffer); (4) §0.3 fact 3's
+   MEASURED tag covers only the log lines, the causal half is the reporter's reading — re-tag
+   INFERRED and fix the §5.4 not-covered row resting on it. Mechanism now: CustodyPark tuple (key,
+   class, authorSlot, worldGen, armed-once); consume in a custody Tick after DrainPendingSpawns
+   where the eid exists; slot-ownership refusals; SlotIo injection for the harness; 17 omission
+   cases. Round 3 is a doc revision + fresh review → needs agents → waits for re-authorisation.
 
 Verification target for 2–4: standalone tests both arms (pre-fix arm fails, fix arm passes), production
 TU compiles, protocol.h blob unchanged, reviewer CLEAN. Runtime effect stays UNMEASURED until a rig

@@ -84,6 +84,19 @@ fix for theme T1 (doors/lights keysHash); it cannot go on the private b150 line 
 b150 compatibility. Source traces T1–T7 were running at checkpoint; read their journal results
 before ranking batch 2.
 
+## State at the final stop (2026-09-09, all agent lanes finished)
+
+- Batch 1: all three lanes CLEAN; all six fixes on private/b150-aligned-fixes @ e2277707, built
+  (main.dll sha256 58d0d365fc99eb1611c67f3487dfb07ee726efdf61fb7ba74b96b50afd528b89, embeds
+  e2277707), policy selftest 3/3, drills ALL EXIT 0 (identity 121/121, provenance 10/10,
+  git-failure 5/5; `C1\EVIDENCE\drills-b150-aligned-fixes-e2277707.log`).
+  NOT deployed to the rig (operator not ready); checklist `C1\RIG-TEST-C01-e2277707.md`.
+- BUG-017 design: revision 2 written and reviewed; DESIGN_NOT_CLEAN with four bounded blockers
+  (DELTA-BRIEF item 5); six of seven prior RBs closed. Round 3 = doc revision + fresh review.
+- Intake: ledger + six traces + ranking published; T6 trace missing (lane failure).
+- Published: experimental findings/c1-intake-20260909 (docs only).
+- Operator rules in force: no new agents; no rig; stop when orchestrator-side work is done.
+
 ## Next tasks, in order
 
 1. Read the pending results: retarget-upstream review, cand08 re-review, design reconciler, T1–T7
