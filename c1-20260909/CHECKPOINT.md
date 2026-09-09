@@ -34,7 +34,20 @@ orchestrator directly (git, builds, drills, reading journals). Ultracode is off.
 | wf_1493ded8-3da | BUG-017 design review (2 lenses + reconciler) | both lenses returned DESIGN_NOT_CLEAN, implementation_go=false (source-correctness: 4 blocking, 4 of 28 citations failed; data-loss/regression: 5 blocking, 3 of 18 citations failed); reconciler RUNNING → `C1\LANES\bug017-design-review\VERDICT.md` when done |
 | wf_11293548-44d | batch-1 implementation (3 authors → fresh reviewers → one remediation round) | see table below |
 
-## Batch-1 implementation state (all local, nothing pushed)
+## Batch-1 implementation state (all local, nothing pushed) — UPDATED after the resume
+
+FINAL VERDICTS (workflow wf_11293548-44d completed after the resume):
+- fix/c01-keyed-destroy-gate a482a5d7 — CLEAN (two fresh reviewers, 0 blocking).
+- fix/retarget-3af5ddae 48497664 — CLEAN (fresh reviewer; code preservation measured with the
+  reviewer's own comment-stripping probe; harness and standalone runners re-run).
+- fix/place-queue-admission d8cd3c1e — CLEAN after two comment-only respins; the remaining
+  "shape authorisation" precondition is the orchestrator's eviction adjudication (ACCEPTED, see
+  DELTA-BRIEF). Ready to cherry-pick onto private/b150-aligned-fixes together with C01.
+Intake workflow wf_0f33d071-bd0 completed: six of seven traces + the rank critic
+(`C1\EVIDENCE\intake	races\`, published on experimental findings/c1-intake-20260909 @ 0e646684);
+T6 (client native effects not replicated) was lost to a lane failure and stays untraced.
+The table below is the pre-resume snapshot.
+
 
 | branch / worktree | head | author | review |
 |---|---|---|---|

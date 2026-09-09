@@ -10,10 +10,10 @@ as results land; every sha below was pasted from git output in this session.
 | upstream main (VOTV-MP) | 3af5ddae (2026-09-08, proto 152) | FORCE-REWRITTEN since f690c017; b150 tag not an ancestor; no b151/b152 release; tools/ tree deleted upstream, CI gates moved to .github/ci/ |
 | b150 release tag | ba6d8c39 (proto 150) | what players run; code-identical to f690c017 except the version constant |
 | private/b150-aligned | 998c43b6 | reviewed NOT_CLEAN on packaging provenance only; untouched |
-| private/b150-aligned-fixes | d437aefc | NEW this session: 998c43b6 + four clean cherry-picks (39c1fb88, e917477f, 653be7cc, d437aefc); applied source lines byte-equal to originals (49/35/41/185); checked out in S:\GAMEMODDING\Multivoid-Private-B150 |
-| fix/retarget-3af5ddae | in progress | worktree C1\WORKTREES\retarget-upstream |
-| fix/c01-keyed-destroy-gate | in progress | worktree C1\WORKTREES\fix-c01 |
-| fix/place-queue-admission | in progress | worktree C1\WORKTREES\fix-cand08 |
+| private/b150-aligned-fixes | **e2277707** | 998c43b6 + four clean cherry-picks (39c1fb88, e917477f, 653be7cc, d437aefc; blob-verified) + the C01 gate (f4624265, 413c3d06, ece4d354; clean) + candidate 8 (e4191f3b, f1d22695 [one comment-only conflict in prop_drop_intent.cpp resolved: b150 comment kept, fix code taken], c3706d9c, 0061c852, a557a7cf, e2277707). All nine new picks verified code-identical to their originals with comments stripped; protocol.h blob unchanged. Checked out in S:\GAMEMODDING\Multivoid-Private-B150. Rebuild at e2277707 EXIT=0 (2026-09-09 08:06:33Z): main.dll sha256 58d0d365fc99eb1611c67f3487dfb07ee726efdf61fb7ba74b96b50afd528b89 (18299392 bytes), embeds MULTIVOID_SOURCE_COMMIT=e22777072ca89d4b604e0b3218044a03b8955cba; policy selftest PASS/PASS/PASS; drills running (log C1\EVIDENCE\drills-b150-aligned-fixes-e2277707.log). This is the rig-test candidate. |
+| fix/retarget-3af5ddae | 48497664 | REVIEWED CLEAN (fresh Opus reviewer): four picks code-identical, harness 10/10 with a negative control built from 3af5ddae's pre-fix blob, standalone runner both arms, protocol.h identical blob. Worktree C1\WORKTREES\retarget-upstream |
+| fix/c01-keyed-destroy-gate | a482a5d7 | REVIEWED CLEAN twice (two fresh reviewers, 0 blocking). Worktree C1\WORKTREES\fix-c01 |
+| fix/place-queue-admission | d8cd3c1e | REVIEWED CLEAN after two comment-only respins (125f174c → 4d6e8437 → d8cd3c1e); shape authorisation = orchestrator adjudication (eviction accepted, below). Worktree C1\WORKTREES\fix-cand08 |
 
 ## Upstream changes that matter (from the Opus rewrite audit)
 
@@ -60,8 +60,10 @@ client object duplication → FPS collapse (several); inventory replaced by host
    `build/votv-coop-b150/Release/main.dll` sha256
    fe0fde750ca30313e3a88c4491ddef6c29b1805b59cb3f471eb37804bd90dc0a (18298368 bytes), embeds
    `MULTIVOID_SOURCE_COMMIT=d437aefc225f4b87e952f38b6006834c7da2d4d3` (1 ascii occurrence);
-   multivoid_policy_tests.exe PASS/PASS/PASS. Identity + provenance + git-failure drills running
-   (log C1\EVIDENCE\drills-b150-aligned-fixes-d437aefc.log). Runtime effect UNMEASURED until a rig arm.
+   multivoid_policy_tests.exe PASS/PASS/PASS. Identity + provenance + git-failure drills on this build ALL EXIT 0
+   (2026-09-09 08:02Z; 83 PASSED, 53 controls FIRED, git-failure 5/5; log
+   C1\EVIDENCE\drills-b150-aligned-fixes-d437aefc.log) — the added headers and uncompiled
+   tests/standalone/*.cpp did not move the provenance gate. Runtime effect UNMEASURED until a rig arm.
 2. Upstream retarget of the four fixes + harness stub extension + standalone test runner → fresh review.
 3. OBS-R3Q-C01 emitter gate + pure policy header + standalone test → fresh review.
 4. Candidate 8 placement-queue admission + header + test → fresh review.
