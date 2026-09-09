@@ -1,0 +1,20 @@
+Similar case: https://discordapp.com/channels/1508397685726646272/1545903206696222801
+
+On connect, a signal-catch event fires in the world feed without any player action: "PlayerNickname2 caught signal 'mars_bday'" — the client hadn't even finished loading (pawn announced 10 s later). It recurred identically on re-join ('whiteDwarf_0'). Later mid-game catches were intentional (player-confirmed) — the bug is specific to the connect/re-connect window.
+
+Log-proven (both peers): the false catch fires in the same second as the join-time baseline slew storm — all 24 dish mirrors slew at once while the client's dish tickers are parked; the host then applies "catch replay" and publishes the same feed message.
+
+Not provable from logs: the detector's internals. The trigger mechanism (the slew storm sweeping the active signal's tolerance window) is our hypothesis from timing, not a code reading.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-04, 21:49:25 and 22:48:53–22:49:00. Full report with log excerpts — see attached file.
+
+
+Ложное событие поимки сигнала при подключении клиента
+
+В момент подключения в мировой ленте появляется событие поимки без действий игроков: "PlayerNickname2 caught signal 'mars_bday'" — клиент ещё даже не догрузился (аватар анонсирован на 10 с позже). На переподключении повторилось один в один ('whiteDwarf_0'). Поздние поимки посреди игры были намеренными (подтверждено игроком) — баг специфичен именно для окна подключения.
+
+Доказано логами (оба пира): ложная поимка срабатывает в ту же секунду, что и присоединительный шторм базового slew — все 24 зеркала тарелок уходят разом, пока тикеры клиента припаркованы; затем хост применяет "catch replay" и публикует то же сообщение в ленту.
+
+Чего логи показать не могут: внутренности детектора. Механизм триггера (шторм slew проводит ориентации через допуск активного сигнала) — наша гипотеза из хронологии, а не чтение кода.
+
+Условия: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; хост = slot 0, клиент = slot 1. Логи 2026-09-04, 21:49:25 и 22:48:53–22:49:00. Полный отчёт с выдержками из логов — в приложенном файле.

@@ -1,0 +1,21 @@
+The client's character died — and instead of the mod's intended "coop death keeps the world", his game traveled to the main menu and the live session was torn down as a quit-to-menu ("gameplay->MENU while a session is live" — log-proven). The host's native world kept running, but two findings aggravate it:
+
+1. Asymmetric death handling: 2 s later the host also died — her death was armed, the level travel REFUSED, revive OK (hp=99.6, log-proven). The client's death produced zero death_revive trace: no arming, no refusal — the native death ran un-intercepted into the menu.
+2. The orphaned host is unjoinable: the lobby stayed listed (stale), but the P2P listener died with the session. Both join attempts burned ~10 s timeouts without a single trace in the host's log. Only a quit-to-menu + re-host (s_Coop 3) rebuilt the listener; the next attempt connected within seconds.
+
+Not provable from logs: what killed the client; whether the death skips the vetoed seam entirely or death_revive arming simply doesn't run client-side; why the master-server lobby listing survived the listener's death.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-04, 22:44:09–22:48:28. Full report with log excerpts — see attached file.
+
+Смерть клиента разрывает сессию; хост в игре становится недоступной для подключения
+
+Персонаж клиента умер — и вместо задуманного «смерть в коопе сохраняет мир» его игра ушла в главное меню, а живая сессия была разорвана как выход в меню («gameplay->MENU while a session is live» — доказано логом). Нативный мир хоста продолжал работать, но два обстоятельства отягчают картину:
+
+1. Асимметричная обработка смерти: 2 с спустя умерла и хоста — её смерть была вооружена, переход ОТКЛОНЁН, оживление ОК (hp=99.6, доказано логом). Смерть клиента не оставила ни следа death_revive: ни вооружения, ни отказа — нативная смерть прошла без перехвата в меню.
+2. Хост-сирота недоступна: лобби осталось в списке (устаревшее), но P2P-слушатель умер вместе с сессией. Обе попытки подключения сожгли ~10-секундные таймауты без единого следа в логе хоста. Только выход в меню + перехост (s_Coop 3) пересобрал слушатель; следующая попытка подключилась за секунды.
+
+Чего логи показать не могут: что убило клиента; переходит ли смерть ветоированный шов целиком или вооружение death_revive просто не выполняется на клиенте; почему листинг лобби мастер-сервера пережил смерть слушателя.
+
+Условия: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; хост = slot 0, клиент = slot 1. Логи 2026-09-04, 22:44:09–22:48:28. Полный отчёт с выдержками из логов — в приложенном файле.
+
+Вообще, кажется, видел сообщения о подобном баге, и даже где-то на гите видел, что он исправлен, но версия с исправлением ещё не выпущена. Возможно, баг не актуален

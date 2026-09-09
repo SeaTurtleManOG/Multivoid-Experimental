@@ -1,0 +1,7 @@
+The client hammers a small container open: it spills 12 items client-side, and the host receives only a bare keyed destroy (eid=0) — the box vanishes in her world, but the loot never spawns there (no container_contents shipped, no PropSpawn; the mod's own log says "a client authors no PropSpawn").
+
+Addendum: the loot DOES reach the host later — but strictly one item per client pickup, ferried through the held-item broadcast (13 crossings in ~1 min, eids 42703–42715; each grab triggered a host-side OnSpawn, proving the items were host-unknown until touched). Untouched items never reach the host.
+
+Not provable from logs: the native loot-spill logic itself (only its client-side outcome — the re-seed count — is visible); whether this authority split is intended.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-04, 22:07:36–22:08:55. Full report with log excerpts — see attached file.

@@ -1,0 +1,19 @@
+We recorded a signal to a disc (indicator green on both peers), then passed the disc around: taking it in hand turned the host's indicator red; after the host picked it up, the client's went red too; re-inserting it into the console left the console EMPTY on the client's screen while the host sees the disc inside.
+
+Log-proven chain: the payload applied to the disc's world actor (eid=3517) never follows the prop out — every hand transition destroys the world-actor generation, and every put-down re-creates the disc as a new generation (eid drift 3517 → 5279 → 5280) with empty state. The final insert rebinds client-side (eid=5280) but is wire-destroyed the same second; the host's payload apply expires ("actor never resolved") and the disc's pose stream matches nothing ("no local match" ~13+/s).
+
+Not provable from logs: where the payload physically lives; whether per-generation binding is intentional.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-04, 22:01:02–22:01:44. Full report with log excerpts — see attached file.
+
+
+
+Записанный сигнал теряется при изъятии диска из консоли; вставленный обратно диск для клиента невидим
+
+Мы записали сигнал на диск (индикатор зелёный у обоих), затем передали диск по рукам: взятие в руку сделало индикатор хоста красным; после того как диск взяла хост, покраснел и у клиента; повторная вставка в консоль оставила консоль ПУСТОЙ на экране клиента, тогда как хост видит диск внутри.
+
+Цепочка доказана логом: payload, применённый к мировому актору диска (eid=3517), не следует за пропом — каждое взятие в руку уничтожает поколение мирового актора, а каждое опускание пересоздаёт диск новым поколением (дрейф eid 3517 → 5279 → 5280) с пустым состоянием. Финальная вставка перебиндивается на клиенте (eid=5280), но в ту же секунду уничтожается по сети; применение payload хоста протухает ("actor never resolved"), поток поз диска не матчится ("no local match" ~13+/с).
+
+Чего логи показать не могут: где физически хранится payload; намеренная ли привязка к поколению.
+
+Условия: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; хост = slot 0, клиент = slot 1. Логи 2026-09-04, 22:01:02–22:01:44. Полный отчёт с выдержками из логов — в приложенном файле.

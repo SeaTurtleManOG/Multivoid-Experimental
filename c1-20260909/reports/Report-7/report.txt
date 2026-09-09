@@ -1,0 +1,18 @@
+While handling items (e.g. ferrying container loot), the client's E-presses sometimes get hijacked: a trash clump appears in hand IN ADDITION to the held item ("out of nowhere", even on a light switch), the aimed-at object's native use is cancelled, and the next E throws the clump — it self-re-piles into a brand-new trash pile that persists in the world for both peers. Three new piles appeared in ~90 s; 33+ hijacks across the session (bursts: 5 presses in 5 s, 11 in 53 s).
+
+The mod's own log admits it: "[GRAB-INTENT] CLIENT E-PRESS aimed at pile proxy (camera-ray cone) -> native use CANCELLED (no use_deny)" and "paired E-release CANCELLED (its press was intercepted)". The cone matched a pile proxy ~3.1 m from the player's hands while the cursor was on another object; dual carry (item + clump) is log-proven.
+
+Not provable from logs: the exact source of one switch-adjacent clump (the press was clean; nearest clump traffic 27–43 s later); any host-side hijack incident; whether the cone has a reach bound.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-04, 22:09:04–22:11:43 and 23:24:53–23:44:56. Full report with log excerpts — see attached file.
+
+
+Нажатие E перехватывается grab-intent куч — фантомные комки спавнят кучи мира
+
+При взаимодействии с предметами (например, при разносе добычи из контейнера) нажатия E клиента иногда перехватываются: в руках появляется комок мусора ПОВЕРХ удерживаемого предмета («из ниоткуда», даже на выключателе), нативное использование прицеленного объекта отменяется, а следующее E бросает комок — он сам пересобирается в совершенно новую кучу мусора, остающуюся в мире у обоих пиров. Три новые кучи за ~90 с; 33+ перехвата за сессию (всплески: 5 нажатий за 5 с, 11 за 53 с).
+
+Лог мода сам признаёт перехват: "[GRAB-INTENT] CLIENT E-PRESS aimed at pile proxy (camera-ray cone) -> native use CANCELLED (no use_deny)" и "paired E-release CANCELLED (its press was intercepted)". Конус сматчил pile-прокси в ~3,1 м от рук игрока при курсоре на другом объекте; двойная переноска (предмет + комок) доказана логом.
+
+Чего логи показать не могут: точный источник одного комка «у выключателя» (нажатие было чистым; ближайший комковый трафик на 27–43 с позже); хостовых инцидентов перехвата; есть ли у конуса граница досягаемости.
+
+Условия: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; хост = slot 0, клиент = slot 1. Логи 2026-09-04, 22:09:04–22:11:43 и 23:24:53–23:44:56. Полный отчёт с выдержками из логов — в приложенном файле.

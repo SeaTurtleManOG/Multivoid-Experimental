@@ -1,0 +1,18 @@
+The blackout event synced correctly (mask=0x00 + 11 lightgroup OFF applies), and the host's breaker restoration synced too — every mask bit applied ok=1, per-room lights came back on the client's screen, breaker states showed ON. But the client's main-room consoles never came back: off screens, interactions dead, the main computer won't boot (player-reported, consistent with logs — E-presses produce only bare use lines with no mod subsystem answering). The host's consoles work (player-reported). Only the processing panel works on the client.
+
+The mod's keyed-subsystem index has no console/computer subsystem at all — console power state is not synced, and the mask value lands client-side without the native restoration chain that boots consoles on the host. Our "state syncs, native event effects don't" class (see also [our container-loot report](https://discordapp.com/channels/1508397685726646272/1546191405670473778)).
+
+Not provable from logs: the native restoration chain itself (console power is unlogged on both sides); whether the client's consoles ever recovered.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-04, 22:14:46–22:22:13. Full report with log excerpts — see attached file.
+
+
+Консоли клиента остаются мёртвыми после восстановления питания хостом
+
+Сюжетное отключение света синхронизировалось корректно (mask=0x00 + 11 применений lightgroup OFF), и восстановление рубильниками хоста тоже — каждый бит маски применён ok=1, свет по комнатам вернулся на экране клиента, состояния рубильников показывали ON. Но консоли в главной комнате у клиента так и не ожили: экраны выключены, взаимодействия мертвы, главный компьютер не включается (со слов игрока, согласуется с логами — нажатия E дают только голые строки use, ни одна подсистема мода не отвечает). У хоста консоли работают (со слов игрока). У клиента работает только панель обработки.
+
+В индексе ключевых подсистем мода подсистемы консолей/компьютера нет вовсе — состояние питания консолей не синхронизируется, и значение маски приходит клиенту без нативной цепочки восстановления, которая включает консоли у хоста. Наш класс «состояние синхронизируется, нативные эффекты события — нет» (см. также [наш отчёт про добычу из контейнера](https://discordapp.com/channels/1508397685726646272/1546191405670473778)).
+
+Чего логи показать не могут: саму нативную цепочку восстановления (питание консолей не логируется ни на одной стороне); ожили ли консоли клиента когда-нибудь.
+
+Условия: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; хост = slot 0, клиент = slot 1. Логи 2026-09-04, 22:14:46–22:22:13. Полный отчёт с выдержками из логов — в приложенном файле.

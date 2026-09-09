@@ -1,0 +1,26 @@
+Similar issues: https://discordapp.com/channels/1508397685726646272/1545905185224663050/1545905185224663050
+https://discordapp.com/channels/1508397685726646272/1508398107753185363/1545852201010856066
+
+After joining, the client's E-presses on the radio telescope door do nothing: the client logs toggle requests under its key of the door ('pDcZUv8…'), but that key appears 0 times in the host's log and no "door: applied" ever arrives. Host-side toggles of the same door use a different key ('f2kqYIFF…') unknown to the client — the host walks through doors that stay visually closed on the client's side.
+
+Root cause is logged by the mod itself: the "compare host vs client for cross-peer Key stability" check fails — both peers rebuild the same 50 doors with different keys (4 distinct keysHash values across 2 world loads). Named base doors sync fine; the affected set is the 31 world-load-added doors.
+
+Worse variant (addendum): in session 2 a telescope door DID open on the client's E — but client-locally only, with zero sync — a silent door-state fork between peers.
+
+Not provable from logs: how door keys are derived (our hypothesis: non-stable runtime identity) and why the native use ran unsuppressed for one door but not the other.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-04, 21:50:24–21:51:48 and 22:53:18. Full report with log excerpts — see attached file.
+
+
+
+Клиент не может открыть дверь радиотелескопа — рассинхрон ключей дверей между пирами
+
+После подключения нажатия E клиента на дверь радиотелескопа ничего не дают: клиент логирует toggle-запросы под своим ключом двери ('pDcZUv8…'), но этот ключ встречается в логе хоста 0 раз, и "door: applied" не приходит никогда. Хостовые переключения той же двери используют другой ключ ('f2kqYIFF…'), клиенту неизвестный — хост проходит сквозь двери, которые на стороне клиента остаются визуально закрытыми.
+
+Первопричину логирует сам мод: проверка "compare host vs client for cross-peer Key stability" проваливается — оба пира пересобирают одни и те же 50 дверей с разными ключами (4 разных keysHash на 2 загрузки мира). Именованные базовые двери синхронизируются нормально; поражены 31 дверь, добавляемая загрузкой мира.
+
+Худший вариант (аддендум): во второй сессии дверь телескопа по E всё же ОТКРЫЛАСЬ — но только локально у клиента, без синхронизации — молчаливое расхождение состояния двери между пирами.
+
+Чего логи показать не могут: откуда вычисляются ключи дверей (наша гипотеза: нестабильная рантайм-идентичность) и почему нативное использование прошло без подавления у одной двери и не прошло у другой.
+
+Условия: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; хост = slot 0, клиент = slot 1. Логи 2026-09-04, 21:50:24–21:51:48 и 22:53:18. Полный отчёт с выдержками из логов — в приложенном файле.

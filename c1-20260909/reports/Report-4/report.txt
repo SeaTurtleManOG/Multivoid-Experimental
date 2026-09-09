@@ -1,0 +1,18 @@
+The client flips a light switch: three "light: sent ON/OFF" requests logged in 3 s, zero visible effect. The switch's key ('BqgD3X…') appears 0 times in the host's log, and the host's retry queue reports the message dying unapplied ("applied 0 deferred, dropped 1 expired").
+
+Same shape as [our door bug](https://discordapp.com/channels/1508397685726646272/1546182816767938710): the light and lightgroup indexes rebuild with different keysHash on each peer after world load (42 instances; 4 different hashes over 2 loads), so hash-keyed switches are unaddressable cross-peer. The join snapshot suffers too — right after connect the client dropped 27 expired light applies. Stable-named switches ('lightswitch_outside') work.
+
+Not provable from logs: the reverse direction (host→client) per-message for this switch; whether a louder WARN exists but is disabled.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-04, 21:49:28–21:51:57. Full report with log excerpts — see attached file.
+
+
+Выключатель света у клиента не работает — рассинхрон keysHash света/lightgroup между пирами
+
+Клиент щёлкает выключателем: три строки "light: sent ON/OFF" за 3 секунды, видимого эффекта ноль. Ключ выключателя ('BqgD3X…') встречается в логе хоста 0 раз, а retry-очередь хоста сообщает о смерти сообщения непримененным ("applied 0 deferred, dropped 1 expired").
+
+Та же картина, что у [дверного бага](https://discordapp.com/channels/1508397685726646272/1546182816767938710): индексы light и lightgroup пересобираются с разными keysHash у каждого пира после загрузки мира (42 инстанса; 4 разных хэша на 2 загрузки), поэтому хэш-ключевые выключатели не адресуются между пирами. Страдает и join-снапшот — сразу после подключения клиент потерял 27 протухших применений света. Именованные выключатели ('lightswitch_outside') работают.
+
+Чего логи показать не могут: обратное направление (хост→клиент) по-сообщений для этого выключателя; существует ли более громкий WARN, но выключен.
+
+Условия: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; хост = slot 0, клиент = slot 1. Логи 2026-09-04, 21:49:28–21:51:57. Полный отчёт с выдержками из логов — в приложенном файле.

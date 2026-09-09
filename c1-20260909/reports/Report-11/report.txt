@@ -1,0 +1,18 @@
+After rejoining the re-hosted session (right after the death-tear incident), the client's character model stood frozen at the spawn point on the host's screen for the entire 5-minute session — while he ran freely, and the host watched objects "levitate" and fly around the base with nobody near them. The logs show a clean split: the host's slot-1 pose pipeline applied a few poses in the first ~2 s, then zero for 5 min 07 s — while the transport fully recovered (the 4.1 MB backlog drained 23 s after join, then a perfectly healthy link), the client demonstrably sent ~60 pose packets/s, and client-origin prop traffic was applied byte-for-byte. His bucket throws crossed with exact velocity vectors — hence the "levitation": held items mirrored into the frozen puppet's view, throws applied by an invisible hand, and the save-position corrector snapping the props back.
+
+The control join 4 minutes later (same in-process re-host, same client) was healthy from the first second — a state/race specific to the first join after a host-death tear, not a general re-hosting property. The session was unplayable as co-op and ended in a full manual restart of both games.
+
+Not provable from logs: the internal state of the pose consumer — no receive/drop/reject lines exist; the fresh=0/s counter is the only witness.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-05, 00:07:17–00:12:28. Full report with log excerpts — see attached file.
+
+
+Кукла клиента замерла на точке спавна на экране хоста всю сессию — хостовый конвейер поз умер в перегруженном окне входа
+
+После переподключения к перехостенной сессии (сразу после инцидента разрыва от смерти) модель персонажа клиента простояла замороженной на точке спавна на экране хоста все 5 минут сессии — при том что сам он свободно бегал, а хост видела «левитирующие» и летающие по базе предметы в отсутствие кого-либо рядом. Логи показывают чёткий раскол: конвейер поз slot 1 на хосте применил несколько поз в первые ~2 с, потом ноль за 5 мин 07 с — при полностью восстановившемся транспорте (бэклог 4,1 МБ слился через 23 с после входа, дальше абсолютно здоровый линк), доказуемо шедшем потоке ~60 поз-пакетов/с от клиента и клиентском трафике пропов, применявшемся байт в байт. Его броски ведра доехали с точными векторами скоростей — отсюда и «левитация»: удерживаемые предметы зеркалились в обзор замороженной куклы, броски применяла невидимая рука, а save-корректор прищёлкивал пропы назад.
+
+Контрольный вход 4 минутами позже (тот же внутри-процессный перехост, тот же клиент) был здоров с первой секунды — состояние/гонка, специфичные для первого входа после разрыва от смерти, а не общее свойство перехоста. Сессия как кооп была непроиграбельна и кончилась полным ручным перезапуском обеих игр.
+
+Чего логи показать не могут: внутреннее состояние потребителя поз — строк приёма/сброса/отказа нет; свидетель один, счётчик fresh=0/s.
+
+Условия: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; хост = slot 0, клиент = slot 1. Логи 2026-09-05, 00:07:17–00:12:28. Полный отчёт с выдержками из логов — в приложенном файле.

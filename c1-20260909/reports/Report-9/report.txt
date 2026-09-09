@@ -1,0 +1,17 @@
+The client lit an explosive barrel at the TR1 depot: a chain reaction destroyed 11 keyed props (2 barrels, 4 gas cans, a box, 2 fire extinguishers, +2), knocked out the transformer (power mask 0x00 shipped client→host, applied ok=1) and set it on fire — all of this ONLY in the client's world. The host, 18 m from the depot, saw nothing: her log has zero explosion/fire/damage events, and she later ate an MRE lying in the client's burn zone.
+
+Every destroyed prop reached her only as a bare keyed destroy (eid=0), applied as a silent despawn — no explosion FX, no chain reaction, no loot spill ever ran on her side. Fire and transformer state have no replication path at all (the keyed subsystem index has no fire/device-state entry; the transformer exists to the mod only as a screen-UI class).
+
+Not provable from logs: the ignition moment (derived window); whether the mask apply visibly blacked out the host's empty base; what the 2 unknown keyed props were.
+
+Setup: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; host = slot 0, client = slot 1. Logs 2026-09-04, 22:34:52–22:36:09. Full report with log excerpts — see attached file.
+
+Клиентская цепочка взрывов бочек — хост получает только голые destroy и ничего больше
+
+Клиент поджёг зажигалкой взрывную бочку на точке TR1: цепная реакция уничтожила 11 keyed-пропов (2 бочки, 4 канистры, ящик, 2 огнетушителя, +2), вывела из строя трансформатор (маска питания 0x00 уехала клиент→хост, применена с ok=1) и подожгла его — и всё это ТОЛЬКО в мире клиента. Хост в 18 м от точки не увидела ничего: в её логе ноль событий взрыв/пожар/урон, а позже она съела MRE, лежащий в клиентской зоне пожара.
+
+Каждый уничтоженный проп доехал до неё только как «голый» destroy по ключу (eid=0), применённый как тихое исчезновение — ни эффектов взрыва, ни цепной реакции, ни высыпания добычи у неё не выполнялось. Пожар и состояние трансформатора не имеют пути репликации вовсе (в индексе keyed-подсистем нет записи о пожаре/состоянии устройств; трансформатор существует для мода только как класс экранного UI).
+
+Чего логи показать не могут: момент поджига (окно выведено); дала ли маска видимый блэкаут на пустой базе хоста; что за 2 неопознанных keyed-пропа.
+
+Условия: Multivoid 0.9.0n b150, VOTV Alpha 0.9.0n; хост = slot 0, клиент = slot 1. Логи 2026-09-04, 22:34:52–22:36:09. Полный отчёт с выдержками из логов — в приложенном файле.
