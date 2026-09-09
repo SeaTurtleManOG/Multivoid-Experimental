@@ -119,6 +119,25 @@ arm; only one rig owner; operator participation required.
 - 1c393401 on the b150 line: session.cpp blob differs only because the private overlay adds 33 lines
   there; the fix's added/removed lines are IDENTICAL between the original and the pick.
 
+## Batch 2 candidates (intake source traces, ranked by the critic; T6 trace lost to a lane failure)
+
+Traces at `C1\EVIDENCE\intake	races\` (published too). Critic ranking:
+1. T1 doors/lights keysHash — UPSTREAM ALREADY FIXED (86d04953 portable identity); a b150-line backport would change wire meaning → design decision, not a fix.
+2. T3 pose pipeline dead after in-process re-host — READY: ResetPeerRemoteState for every slot at Session::Start().
+3. T5 drive payload lost across hand transitions — READY: hoist NoteLocalDriveBirth out of the freshBirth-only block.
+4. T2 destroy-by-key collision (floppy) — READY: same family as the C01 gate; suppress the outbound keyed destroy when the dying host actor has no Element and is still pending in the spawn watcher.
+5–6. T7 client duplication / rejoin inventory — needs rig first.
+7–8. T4 death→menu / listener death — diagnostic first, then keepalive.
+Implementation of any of these needs author + fresh reviewer lanes → blocked by the operator's no-new-agents rule until re-authorised.
+
+## Published (operator-authorised 2026-09-09)
+
+- `SeaTurtleManOG/Multivoid-Experimental@findings/c1-intake-20260909` head 9eddc7db (docs only, 35
+  files, rooted on findings/verified 546419cd): intake ledger, the reporter's 11 reports as text,
+  CONTEXT/DELTA-BRIEF/CHECKPOINT (transcript path scrubbed), five orientation findings, BUG-017
+  draft 1 + reconciled verdict. Videos, screenshots and the log bundle NOT published (sha256 in the
+  ledger). Purpose: readable by ChatGPT desktop. Later drops append to the same branch.
+
 ## Not done / constraints
 
 - Nothing pushed, merged, PR'd or released. All branches local.
