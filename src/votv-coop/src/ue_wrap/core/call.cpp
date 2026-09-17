@@ -7,6 +7,7 @@
 #include <cstring>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace ue_wrap {
 
@@ -28,6 +29,21 @@ namespace {
 // forwards off-thread rather than draining our queue there (ue_wrap/core/pe_detour.cpp).
 std::mutex g_metaMutex;
 std::unordered_map<void*, ParamFrame::Metadata> g_meta;
+
+// Failed named writes are deterministic for a resolved UFunction's lifetime:
+// retrying the same function/parameter/reason cannot repair its reflected layout.
+// Keep the first diagnostic, but do not flood the log on a per-tick caller. The
+// UFunction pointer is safe as the identity key for the same reason as g_meta.
+std::mutex g_setFailureMutex;
+std::unordered_map<void*, std::unordered_set<std::wstring>> g_reportedSetFailures;
+
+bool FirstSetFailure(void* fn, const wchar_t* name, const wchar_t* reason) {
+    std::wstring key(reason);
+    key.push_back(L'\0');
+    key.append(name);
+    std::lock_guard<std::mutex> lk(g_setFailureMutex);
+    return g_reportedSetFailures[fn].insert(std::move(key)).second;
+}
 
 const ParamFrame::Metadata* GetOrBuildMetadata(void* fn) {
     {
@@ -147,15 +163,36 @@ int32_t ParamFrame::OffsetOf(const wchar_t* name) const {
 }
 
 bool ParamFrame::SetRaw(const wchar_t* name, const void* src, int32_t size) {
-    if (fn_ == nullptr || buf_.empty()) return false;  // empty => zero-param frame; nothing to set
+    if (fn_ == nullptr) {
+        writeFailed_ = true;
+        return false;
+    }
+    if (buf_.empty()) {
+        writeFailed_ = true;
+        if (FirstSetFailure(fn_, name, L"empty-frame")) {
+            UE_LOGE("ParamFrame::Set: param '%ls' cannot be written to an empty frame "
+                    "(fn=%p) -- refusing call; identical failures suppressed",
+                    name, fn_);
+        }
+        return false;  // zero-param frame: a write request is invalid
+    }
     const int32_t off = OffsetOf(name);
     if (off < 0) {
-        UE_LOGE("ParamFrame::Set: unknown param '%ls'", name);
+        writeFailed_ = true;
+        if (FirstSetFailure(fn_, name, L"unknown")) {
+            UE_LOGE("ParamFrame::Set: unknown param '%ls' (fn=%p) -- refusing call; "
+                    "identical failures suppressed",
+                    name, fn_);
+        }
         return false;
     }
     if (off + size > static_cast<int32_t>(buf_.size())) {
-        UE_LOGE("ParamFrame::Set: param '%ls' off=%d size=%d overflows frame %zu",
-                name, off, size, buf_.size());
+        writeFailed_ = true;
+        if (FirstSetFailure(fn_, name, L"overflow")) {
+            UE_LOGE("ParamFrame::Set: param '%ls' off=%d size=%d overflows frame %zu "
+                    "(fn=%p) -- refusing call; identical failures suppressed",
+                    name, off, size, buf_.size(), fn_);
+        }
         return false;
     }
     std::memcpy(buf_.data() + off, src, static_cast<size_t>(size));
@@ -179,7 +216,7 @@ bool ParamFrame::GetRaw(const wchar_t* name, void* dst, int32_t size) const {
 }
 
 bool Call(void* object, ParamFrame& frame) {
-    if (!frame.valid()) return false;
+    if (!frame.ready()) return false;
     return reflection::CallFunction(object, frame.function(), frame.data());
 }
 
