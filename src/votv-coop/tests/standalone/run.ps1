@@ -126,6 +126,29 @@ try {
     Invoke-Case 'candidate_01-fixed' $IncludeRoot `
         @((Join-Path $TestRoot 'candidate_01_param_frame_boundary.cpp'), $Call) 'pass'
 
+    # candidate_t3 -- both arms across coop/net/session_watermark_reset.h. The pre-fix fallback is
+    # a no-op reset, which is literally what the tree did at the session boundary before the fix.
+    Invoke-Case 'candidate_t3-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_t3_session_watermark_reset.cpp')) 'pass'
+    $PreT3 = New-PreFixIncludeRoot 'candidate_t3' @('coop\net\session_watermark_reset.h')
+    Write-Output $PreT3.Note
+    Invoke-Case 'candidate_t3-prefix' $PreT3.Root `
+        @((Join-Path $TestRoot 'candidate_t3_session_watermark_reset.cpp')) 'fail'
+
+    # ---- APPENDED (the reliable inbox at the session seam). Self-contained; keep at the end of
+    # the case list so a textual conflict with another append resolves mechanically.
+    # candidate_14 -- both arms across coop/net/session_watermark_reset.h, whose
+    # RetireReceiveQueueForNewSession is the ONLY route by which session_status.cpp empties
+    # reliableInbox_ at a session start. Unlike candidate_t3's pose block, which has a second
+    # clearer, the reliable inbox has no second clearer at that seam, so hiding the header is
+    # exactly the pre-fix tree for this queue.
+    Invoke-Case 'candidate_14-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_14_session_reliable_inbox_seam.cpp')) 'pass'
+    $Pre14 = New-PreFixIncludeRoot 'candidate_14' @('coop\net\session_watermark_reset.h')
+    Write-Output $Pre14.Note
+    Invoke-Case 'candidate_14-prefix' $Pre14.Root `
+        @((Join-Path $TestRoot 'candidate_14_session_reliable_inbox_seam.cpp')) 'fail'
+
     # CASES-END (each integration step appends its candidates above this line)
 
     # The file list and the case list must agree: a candidate source nobody registered is

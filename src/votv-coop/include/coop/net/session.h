@@ -469,6 +469,13 @@ private:
     int FindPeerSlotForConn(uint32_t hConn);
     // Per-peer reset on slot disconnect. The caller holds remoteMutex_.
     void ResetPeerRemoteState(int peerSlot);
+    // The receive state no other boundary clears, for a SESSION boundary rather than a slot one:
+    // every slot's ResetPeerRemoteState plus the streams that reset does not own (the per-slot desk
+    // cursor and the four host-originated ones), and the reliable inbox. A Session object outlives
+    // its sessions, so Start() must clear these or the next session opens holding the dead one's
+    // watermarks. The pose batches and pose queues are not here: Stop clears them through
+    // ResetPoseBatches. The caller holds remoteMutex_.
+    void ResetRemoteStreamStateForNewSession();
 
     // Host relay of an unreliable datagram from `originSlot` to every other client: the header's
     // senderEpoch rewritten to the host's (the receiver's epoch latch is per connection) and
@@ -726,10 +733,16 @@ private:
     uint32_t lastRemoteWorldActorSeq_  = 0;
     // Per-slot expected senderEpoch, latched from the slot's first packet (0 = not yet); a
     // mismatching packet is dropped at HandleMessage entry. Cleared in ResetPeerRemoteState so the
-    // next occupant re-latches. Under remoteMutex_.
+    // next occupant re-latches, and through it at session start, so a reused Session cannot open
+    // holding a dead session's latch. Under remoteMutex_.
     std::array<uint32_t, kMaxPeers> expectedEpoch_{};
 
-    // The reliable inbox (shared across peers; a FIFO of arrival order).
+    // The reliable inbox (shared across peers; a FIFO of arrival order). Entries are erased per
+    // slot at every per-connection close and the whole queue is cleared when the last peer goes, and
+    // through ResetRemoteStreamStateForNewSession at session start too, so a reused Session cannot
+    // open holding a dead session's delivered reliables: a ReliableMessage names its origin by a
+    // bare senderPeerSlot, and Stop frees every slot for FindFreePeerSlotForClient to hand out
+    // again. Under reliableInboxMutex_, which is the queue's own -- NOT remoteMutex_.
     std::mutex reliableInboxMutex_;
     std::deque<ReliableMessage> reliableInbox_;
     // The high-water of reliableInbox_ since the last ~1 Hz net-diag sample, stamped at the enqueue
