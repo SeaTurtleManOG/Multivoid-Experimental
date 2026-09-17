@@ -126,6 +126,14 @@ try {
     Invoke-Case 'candidate_01-fixed' $IncludeRoot `
         @((Join-Path $TestRoot 'candidate_01_param_frame_boundary.cpp'), $Call) 'pass'
 
+    # candidate_10 -- both arms across coop/interactables/pending_retry.h.
+    Invoke-Case 'candidate_10-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_10_pending_retry_order.cpp')) 'pass'
+    $Pre10 = New-PreFixIncludeRoot 'candidate_10' @('coop\interactables\pending_retry.h')
+    Write-Output $Pre10.Note
+    Invoke-Case 'candidate_10-prefix' $Pre10.Root `
+        @((Join-Path $TestRoot 'candidate_10_pending_retry_order.cpp')) 'fail'
+
     # CASES-END (each integration step appends its candidates above this line)
 
     # The file list and the case list must agree: a candidate source nobody registered is

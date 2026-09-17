@@ -13,6 +13,7 @@
 #include "coop/interactables/drive_sync.h"
 
 #include "coop/element/registry.h"
+#include "coop/interactables/pending_retry.h"
 #include "coop/interactables/desk_snd_fx.h"   // ScopedWireApply (the shared desk wire guard)
 #include "coop/interactables/drive_rack_sync.h"  // MarkDirtyFromVerb + TryConsumeDenyReap (owner API)
 #include "coop/interactables/signal_wire.h"
@@ -421,11 +422,7 @@ void RetryPendingTick() {
     const auto now = Clock::now();
     std::vector<Pending> keep;
     for (auto& pd : g_pending) {
-        if (now >= pd.until) {
-            UE_LOGW("drive_sync: pending apply kind=%d expired (actor never resolved)", pd.kind);
-            continue;
-        }
-        bool done = false;
+        bool resolvable = false;
         if (pd.kind == 0) {
             // If the slot's state moved since the line was
             // queued, the world passed it by -- DROP, never replay stale.
@@ -438,19 +435,29 @@ void RetryPendingTick() {
                 continue;
             }
             void* drive = LivePropActor(pd.slotLine.driveEid);
-            if (drive || !pd.slotLine.occupied) {
-                OnSlotLine(pd.slotLine, pd.senderSlot, /*fromPending*/true);
-                done = true;
-            }
+            resolvable = drive || !pd.slotLine.occupied;
         } else if (pd.kind == 1) {
             uint32_t eid = 0;
             if (pd.blob.size() >= 4) std::memcpy(&eid, pd.blob.data(), 4);
-            if (LivePropActor(eid)) {
-                ApplyPayloadBlob(pd.blob, pd.senderSlot, /*fromPending*/true);
-                done = true;
-            }
+            resolvable = LivePropActor(eid) != nullptr;
         }
-        if (!done) keep.push_back(std::move(pd));
+
+        const PendingRetryDisposition disposition =
+            ClassifyPendingRetry(resolvable, now >= pd.until);
+        if (disposition == PendingRetryDisposition::Apply) {
+            if (pd.kind == 0) {
+                OnSlotLine(pd.slotLine, pd.senderSlot, /*fromPending*/true);
+            } else if (pd.kind == 1) {
+                ApplyPayloadBlob(pd.blob, pd.senderSlot, /*fromPending*/true);
+            }
+            continue;
+        }
+        if (disposition == PendingRetryDisposition::Expire) {
+            UE_LOGW("drive_sync: pending apply kind=%d expired "
+                    "(actor unresolved at deadline)", pd.kind);
+            continue;
+        }
+        keep.push_back(std::move(pd));
     }
     g_pending.swap(keep);
 }
