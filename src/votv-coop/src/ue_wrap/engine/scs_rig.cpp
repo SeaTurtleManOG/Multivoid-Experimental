@@ -38,8 +38,8 @@ namespace P = ue_wrap::profile;
 // which a bare pointer parked in a local map cannot do.
 std::unordered_map<std::wstring, int32_t> g_propOff;
 
-// Offset of `prop` on `declaringClassName` (the class that declares it; the offset lookup does
-// not climb the super chain). -1 if unresolved.
+// Offset of `prop` on `declaringClassName` (the class that declares it).
+// -1 if unresolved.
 int32_t PropOff(const wchar_t* declaringClassName, const wchar_t* prop) {
     std::wstring key(declaringClassName);
     key += L'.';

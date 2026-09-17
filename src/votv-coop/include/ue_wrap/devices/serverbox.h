@@ -65,11 +65,14 @@ bool EnsureBreakResolved();
 bool ReadIsBroken(void* box);
 
 // Set the break flag and let the box re-skin itself from it. check() is notify-free -- no
-// delegate, no minigame, unlike the verbs that normally reach this state -- and re-skins from
-// IsBroken, the box's own `resisnant` (the blueprint's spelling), active and calc: while the glow
-// effect is recently rendered it retargets only that effect's particle, otherwise it sets the body
-// material, which is the OFF instance unless active && calc. So this pair applies a break
-// authoritatively without firing the notice the verbs fire. Returns false if unresolved.
+// delegate, no minigame, unlike the verbs that normally reach this state. On every path it first
+// re-caches the gamemode if that reference is not valid, then sets the body material (the OFF
+// instance unless active && calc, otherwise a colour picked by the box's own `resisnant` -- the
+// blueprint's spelling -- then isBroken) and switches the server audio to !isBroken && active &&
+// the gamemode's usesp_calc. Only while the glow effect was recently rendered does it also
+// retarget that effect's particle. So this pair repaints a box from the host's break state without
+// firing the notice the verbs fire. This writes none of active, calc and resisnant; active rides
+// the ApplianceState lane. Returns false if unresolved.
 bool ApplyBreak(void* box, bool broken);
 
 bool ReadAggregates(Aggregates& out);

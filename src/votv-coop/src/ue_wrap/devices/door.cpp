@@ -115,8 +115,8 @@ bool EnsureResolved() {
     void* doorCls = R::FindClass(L"door_C");
     if (!doorCls) return false;  // BP class not loaded yet -- caller retries
 
-    // The key is declared on the trigger base; the property lookup does not climb to the
-    // superclass, so query the declaring class. The opened flag is declared on the door.
+    // The key is declared on the trigger base, so query the declaring class. The opened flag is
+    // declared on the door.
     int32_t keyOff = -1;
     if (void* trigCls = R::FindClass(L"triggerBase_C")) {
         keyOff = R::FindPropertyOffset(trigCls, L"Key");

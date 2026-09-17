@@ -47,8 +47,8 @@ bool EnsureResolved() {
         UE_LOGW("base_window: reflected clean offset not found -- using fallback 0x%04X", kCleanOffFallback);
         cleanOff = kCleanOffFallback;
     }
-    // `Key` is declared on the Aactor_save_C parent; FindPropertyOffset does NOT climb
-    // to super, so query the declaring class explicitly (same pattern as door/triggerBase).
+    // `Key` is declared on the Aactor_save_C parent; query the declaring class explicitly (same
+    // pattern as door/triggerBase).
     int32_t keyOff = -1;
     if (void* saveCls = R::FindClass(L"actor_save_C")) {
         keyOff = R::FindPropertyOffset(saveCls, L"Key");

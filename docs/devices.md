@@ -38,6 +38,25 @@ keeps a door open while any peer holds it and closes it when the last holder lea
 with no auto-revert (the garage, an appliance, a locker, a lid) is symmetric: any peer's edge is
 the state.
 
+### The kitchen oven's repair
+
+An oven is usually placed broken, and the game switches it on only once it is repaired, through
+its repair screen. A repair is each machine's own and no lane carries it, so an ON applied as it
+stands to an oven this machine never repaired would heat food with the oven light hidden, the
+switch reading "Repair" and opening the repair screen, and this player could not switch it off.
+The apply therefore also runs the oven's own repair verb, the one the oven's load runs for a saved
+repaired oven, so the light and the switch work here as on the machine that repaired it. That
+covers a joiner, whose world came from a save older than the host's repair and whose snapshot
+carries the ON. The step is skipped while this machine's player has that oven's repair screen
+open, because the verb would remove the screen and leave the player's input with it; the oven is
+then on and unrepaired here until the player repairs it or a later ON lands with the screen
+closed. Every unrepaired oven owns its screen from the moment it begins play, so what says the
+screen is open is its visibility. The screen raises it as the last step of opening, once it has
+taken the input. Only leaving the screen gives the input back, through its quit or another
+interface taking the input (a ragdoll's reset to no interface included), and each lowers the
+visibility with it, except an interface the game marks as 3D, which leaves it raised and so only
+keeps the step skipped for longer (`ue_wrap/devices/appliance`, `ue_wrap/devices/kitchen_repair`).
+
 ### What is inside a container
 
 A container's contents are not on the container. Every one of them reads from a single global
@@ -295,13 +314,17 @@ an error line.
 | The coin collect has two entries; the interceptor sits on the overlap entry, and the E-press entry dispatches inside the Blueprint where it cannot fire, so a coin a client collects by pressing is credited on the client only and the host's next balance broadcast erases it | `[V]` `coop/items/coingun_sync` |
 | A client's earnings from anything but the drone and the coin gun (a point sack, a chest, an achievement) reach only its own machine and are erased by the host's next broadcast | `[V]` `coop/world/balance_sync` is one-way |
 | A client's light-group index has been reported dropping to zero after a join; not reproduced | `[?]` [issue 11](https://github.com/VOTV-MP/Multivoid/issues/11) |
+| A shower another player turned on shows and sounds its water here but runs no tick here: this machine's player gets no energy top-up from standing in it, and it throws no splash and fills no bucket on this machine. Only the machine whose player pressed runs the shower's tick | `[RD]` `ue_wrap/devices/appliance`: the shower's tick adds to the running machine's own sleep meter on any player-class hit, a remote player's puppet included, so a machine applying the switch turns the tick off after `updWater`, and again when the shower begins play |
+| An oven repaired and left off is still broken on a machine that never repaired it: an OFF carries no repair, so that player sees "Repair" and must repair it before switching it on. Carrying the repair would be a new wire field | `[RD]` the oven's `fixed` is on no lane; the apply repairs only on an ON |
+| An ON that lands while this machine's player has that oven's repair screen open leaves the oven on and unrepaired here until the player repairs it or a later ON lands with the screen closed. A save that already holds an oven on but unrepaired is not repaired by a joiner's snapshot either: an ON that matches the local state is not applied | `[RD]` `ue_wrap/devices/kitchen_repair`; the channel's symmetric apply skips a matching state |
+| An oven an applied ON repaired gives this machine's player no progress toward the oven-repair achievement: only finishing the repair screen progresses it, and a repaired oven no longer opens that screen | `[RD]` the screen's finish runs the oven's repair, its quit, then the `ovenfix` achievement progress; the apply runs only the oven's repair |
 | A slot change reaches the other peer on the next poll, so up to a second plus the round trip. A player who reaches a box inside that window acts on the slot as it was: an eject of a disc the other peer has just inserted answers "No floppy disc in the slot" and is not retried | `[V]` the lane polls at 1 Hz; a faster poll would narrow the window rather than close it |
 
 ## Code map
 
 | Concept | Files |
 |---|---|
-| the engine and the adapters | `coop/interactables/interactable_channel.h`, `coop/interactables/interactable_sync`, `ue_wrap/devices/door`, `ue_wrap/devices/door_box`, `ue_wrap/devices/lightswitch`, `ue_wrap/devices/garage`, `ue_wrap/devices/appliance` |
+| the engine and the adapters | `coop/interactables/interactable_channel.h`, `coop/interactables/interactable_sync`, `ue_wrap/devices/door`, `ue_wrap/devices/door_box`, `ue_wrap/devices/lightswitch`, `ue_wrap/devices/garage`, `ue_wrap/devices/appliance`, `ue_wrap/devices/kitchen_repair` |
 | keypads | `coop/interactables/keypad_sync`, `ue_wrap/devices/passwordlock` |
 | power, turbine, windows, grime | `coop/interactables/power_sync`, `coop/interactables/turbine_sync`, `coop/interactables/window_sync`, `coop/interactables/grime_sync`, `ue_wrap/devices/power_control`, `ue_wrap/devices/windturbine`, `ue_wrap/devices/base_window`, `ue_wrap/devices/grime` |
 | the drone | `coop/interactables/drone_sync`, `ue_wrap/devices/drone` |

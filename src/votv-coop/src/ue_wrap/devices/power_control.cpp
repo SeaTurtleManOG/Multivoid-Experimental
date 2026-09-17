@@ -77,8 +77,8 @@ bool EnsureResolved() {
         return false;
     };
 
-    // Key lives on the AtriggerBase_C base; FindPropertyOffset does NOT climb to a super, so
-    // resolve it against triggerBase_C directly (same gotcha garage/appliance handle).
+    // Key is declared on the AtriggerBase_C base; resolve it against triggerBase_C, the declaring
+    // class (the same pattern the door follows).
     int32_t keyOff = -1;
     if (void* trig = R::FindClass(L"triggerBase_C")) keyOff = R::FindPropertyOffset(trig, L"Key");
     if (keyOff < 0) return refuse(L"triggerBase_C::Key");

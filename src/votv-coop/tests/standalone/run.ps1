@@ -126,6 +126,25 @@ try {
     Invoke-Case 'candidate_01-fixed' $IncludeRoot `
         @((Join-Path $TestRoot 'candidate_01_param_frame_boundary.cpp'), $Call) 'pass'
 
+    # candidate_10 -- both arms across coop/interactables/pending_retry.h.
+    Invoke-Case 'candidate_10-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_10_pending_retry_order.cpp')) 'pass'
+    $Pre10 = New-PreFixIncludeRoot 'candidate_10' @('coop\interactables\pending_retry.h')
+    Write-Output $Pre10.Note
+    Invoke-Case 'candidate_10-prefix' $Pre10.Root `
+        @((Join-Path $TestRoot 'candidate_10_pending_retry_order.cpp')) 'fail'
+
+    # ---- APPENDED (the kitchen oven's repair on an applied ON). Self-contained; keep at the end of
+    # the case list so a textual conflict with another append resolves mechanically.
+    # candidate_19 -- both arms across ue_wrap/devices/kitchen_repair.h. The pre-fix fallback in the
+    # test source never repairs: before the fix an applied ON wrote Active and ran upd() only.
+    Invoke-Case 'candidate_19-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_19_kitchen_repair_on_apply.cpp')) 'pass'
+    $Pre19 = New-PreFixIncludeRoot 'candidate_19' @('ue_wrap\devices\kitchen_repair.h')
+    Write-Output $Pre19.Note
+    Invoke-Case 'candidate_19-prefix' $Pre19.Root `
+        @((Join-Path $TestRoot 'candidate_19_kitchen_repair_on_apply.cpp')) 'fail'
+
     # CASES-END (each integration step appends its candidates above this line)
 
     # The file list and the case list must agree: a candidate source nobody registered is
