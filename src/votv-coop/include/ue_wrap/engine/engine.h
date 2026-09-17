@@ -125,6 +125,11 @@ bool SetComponentWorldRotation(void* component, const FRotator& rotation);
 // EventTick, which re-applies view and post-process to the shared screen. Game thread.
 bool SetActorTickEnabled(void* actor, bool enabled);
 
+// True once AActor::SetActorTickEnabled has resolved. A caller about to run a verb that enables a
+// tick checks this first, so it never runs that verb when it could not turn the tick back off.
+// Game thread.
+bool SetActorTickEnabledResolved();
+
 // AActor::SetActorHiddenInGame: visual only. Collision is a separate flag with its own setter
 // below. Game thread.
 bool SetActorHiddenInGame(void* actor, bool hidden);

@@ -70,8 +70,8 @@ bool EnsureResolved() {
     void* lockCls = R::FindClass(L"passwordLock_C");
     if (!lockCls) return false;  // BP class not loaded yet -- caller retries
 
-    // Key is declared on AtriggerBase_C; FindPropertyOffset does NOT climb to super,
-    // so query the declaring class. The rest are declared on passwordLock_C.
+    // Key is declared on AtriggerBase_C, so query the declaring class. The rest are declared on
+    // passwordLock_C.
     int32_t keyOff = -1;
     if (void* trigCls = R::FindClass(L"triggerBase_C")) keyOff = R::FindPropertyOffset(trigCls, L"Key");
     if (keyOff < 0) {

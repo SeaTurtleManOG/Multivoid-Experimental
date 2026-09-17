@@ -601,6 +601,11 @@ bool SetActorTickEnabled(void* actor, bool enabled) {
     return Call(actor, f);
 }
 
+bool SetActorTickEnabledResolved() {
+    ResolveActorFns();
+    return g_setTickFn != nullptr;
+}
+
 bool SetActorHiddenInGame(void* actor, bool hidden) {
     // Visual only: hidden is a separate flag from collision. The deferred-mirror layer hides a
     // mirror until reconcile resolves, then reveals it. Game thread.
