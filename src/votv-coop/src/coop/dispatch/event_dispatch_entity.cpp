@@ -6,6 +6,7 @@
 
 #include "event_dispatch.h"  // co-located private header (src tree, not include/)
 
+#include "coop/dispatch/prop_spawn_gate.h"
 #include "coop/element/player.h"
 #include "coop/element/registry.h"
 
@@ -179,16 +180,16 @@ bool HandleEntityEvent(net::Session& session,
         // bracket re-expresses existing entities, client-born ones included, and a re-bracket (a
         // cave travel, a host save load) must re-express a client's own dropped items back to it,
         // or the adoption sweep would destroy them as unclaimed.
+        // Zero is the protocol's no-EID sentinel: it is admitted only when the Key supplies
+        // identity, so an eid-only zero is still refused.
         if (msg.senderPeerSlot >= 0) {
             const bool senderIsHost = (msg.senderPeerSlot == 0);
-            const bool ok = senderIsHost
-                ? (coop::element::Registry::IsAllowedHostAllocatedEid(p.elementId) ||
-                   coop::element::Registry::IsAllowedPeerAllocatedEid(p.elementId))
-                : coop::element::Registry::IsAllowedPeerAllocatedEid(p.elementId);
+            const bool ok = coop::dispatch::IsAllowedInboundPropSpawn(p, senderIsHost);
             if (!ok) {
-                UE_LOGW("event_feed: PropSpawn elementId=0x%08x out of allowed "
+                UE_LOGW("event_feed: PropSpawn elementId=0x%08x key='%.*s' out of allowed "
                         "%s range (senderPeerSlot=%d) -- dropping",
                         p.elementId,
+                        static_cast<int>(p.key.len), p.key.data,
                         senderIsHost ? "host(any)" : "peer",
                         msg.senderPeerSlot);
                 break;
