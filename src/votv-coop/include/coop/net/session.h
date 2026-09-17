@@ -229,6 +229,16 @@ public:
     bool SendReliableToSlot(int peerSlot, ReliableKind kind, const void* payload,
                             int len, uint8_t senderSlot = 0);
 
+    // Host-only slot-reuse guard for retained per-peer work. `peerGeneration`
+    // identifies the intended occupant and must be the current non-zero
+    // occupancy generation. The implementation captures that occupant's
+    // connection handle between two generation reads, so a replacement can
+    // make the call fail but can never redirect it to the successor. The token
+    // is local process state and does not change the wire format.
+    bool SendReliableToSlotForGeneration(int peerSlot, uint32_t peerGeneration,
+                                         ReliableKind kind, const void* payload,
+                                         int len, uint8_t senderSlot = 0);
+
     // One direct GNS attempt, no backlog: false on send-buffer backpressure, which is the
     // save-transfer pump's pacing signal (retry next tick). That pump is its only intended caller.
     bool TrySendReliableToSlot(int peerSlot, ReliableKind kind, const void* payload,
@@ -388,6 +398,10 @@ public:
                                  char* out, int outLen) const;
 
   private:
+    bool SendReliableToSlotImpl_(int peerSlot, uint32_t expectedGeneration,
+                                 ReliableKind kind, const void* payload,
+                                 int len, uint8_t senderSlot);
+
     // Shared teardown for a slot the caller has already claimed (peerConns_ exchanged or CAS'd to
     // 0).
     bool KickClaimed(int peerSlot, uint32_t hConn, EndReason code, const char* reason);

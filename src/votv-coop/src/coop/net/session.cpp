@@ -78,6 +78,23 @@ bool Session::SendReliableToSlot(int peerSlot, ReliableKind kind, const void* pa
     // TrySendReliableToSlot itself, and this routing keeps a stray caller correct.
     if (kind == ReliableKind::SaveTransferBegin || kind == ReliableKind::SaveTransferChunk)
         return TrySendReliableToSlot(peerSlot, kind, payload, len, senderSlot);
+    return SendReliableToSlotImpl_(peerSlot, 0, kind, payload, len, senderSlot);
+}
+
+bool Session::SendReliableToSlotForGeneration(int peerSlot, uint32_t peerGeneration,
+                                              ReliableKind kind, const void* payload,
+                                              int len, uint8_t senderSlot) {
+    // Save transfer owns its own paced retry and never retains generation-
+    // addressed work. Refuse accidental use rather than silently dropping the
+    // generation condition through TrySendReliableToSlot.
+    if (peerGeneration == 0 || kind == ReliableKind::SaveTransferBegin ||
+        kind == ReliableKind::SaveTransferChunk) return false;
+    return SendReliableToSlotImpl_(peerSlot, peerGeneration, kind, payload, len, senderSlot);
+}
+
+bool Session::SendReliableToSlotImpl_(int peerSlot, uint32_t expectedGeneration,
+                                      ReliableKind kind, const void* payload,
+                                      int len, uint8_t senderSlot) {
     if (peerSlot < 0 || peerSlot >= kMaxPeers) return false;
     if (len < 0 || len > kMaxReliablePayload) {
         UE_LOGW("net: SendReliableToSlot rejected (slot=%d len=%d > %d)",
@@ -89,8 +106,17 @@ bool Session::SendReliableToSlot(int peerSlot, ReliableKind kind, const void* pa
     // replay rebuilds all of it. Not absorbed by the backlog: a queued gate-skip would deliver
     // stale mutations at ready time and duplicate the replay.
     if (!IsSlotWorldReady(peerSlot) && !IsPreWorldSendableKind(kind)) return false;
+    if (expectedGeneration != 0 &&
+        peerGenBySlot_[peerSlot].load(std::memory_order_acquire) != expectedGeneration) return false;
     const uint32_t hConn = peerConns_[peerSlot].load();
     if (hConn == 0) return false;
+    // The handle was captured while the intended generation was current. If a
+    // replacement raced the capture, its generation was minted before its
+    // handle was stored and this second read rejects it. A replacement after
+    // this read can only leave us sending through the captured predecessor
+    // handle, never through the successor's handle.
+    if (expectedGeneration != 0 &&
+        peerGenBySlot_[peerSlot].load(std::memory_order_acquire) != expectedGeneration) return false;
 
     uint8_t wire[sizeof(PacketHeader) + sizeof(ReliableHeader) + kMaxReliablePayload];
     const int total = BuildReliableWire_(wire, kind, payload, len,

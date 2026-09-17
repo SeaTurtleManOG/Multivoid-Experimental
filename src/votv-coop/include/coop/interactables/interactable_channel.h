@@ -299,6 +299,7 @@ public:
     // Host: one peer left. Its bit is dropped from every door it held; a door whose holder set hits
     // zero closes (autoclose restored, OFF broadcast), the rest stay open. Game thread.
     void OnPeerLeft(uint8_t slot) {
+        CancelPendingDeliveriesForSlot(slot);
         if (mode_ != Mode::HostAuth) return;
         auto* s = session_.load(std::memory_order_acquire);
         if (!s || s->role() != coop::net::Role::Host) return;
@@ -337,6 +338,9 @@ public:
         if (!s) return;
         if (s->role() != coop::net::Role::Host) return;  // host-only snapshot
         if (peerSlot < 0 || peerSlot >= static_cast<int>(coop::players::kMaxPeers)) return;
+        const uint32_t peerGeneration = s->peerGenerationForSlot(peerSlot);
+        if (peerGeneration == 0) return;
+        CancelStalePendingDeliveriesForSlot(peerSlot, peerGeneration);
         // No forced rebuild: the hub's 2 s pass keeps the index fresh, and a swinger spawned inside
         // that window reaches the joiner on its next state change.
         std::vector<std::pair<std::wstring, Ref>> items;
@@ -348,23 +352,44 @@ public:
         // The host's current state for every indexed instance, OFF included: the joiner loads its
         // own save, so a switch the host turned off would otherwise stay on there. A symmetric
         // receiver skips instances already matching, so an agreeing OFF costs one small packet.
-        int sent = 0;
+        // A send the transport refuses is no longer banked as delivered: it is queued as a
+        // generation-stamped pending delivery and retried for that peer, so the counters below
+        // separate attempts from acceptances.
+        int attempted = 0;
+        int accepted = 0;
+        int failed = 0;
         for (auto& d : items) {
+            if (s->peerGenerationForSlot(peerSlot) != peerGeneration) break;
             if (!R::IsLiveByIndex(d.second.actor, d.second.idx)) continue;
             bool on = false;
             if (!a_.ReadState(d.second.actor, on)) continue;
             coop::net::KeyedTogglePayload p{};
             WireKeyFromString(d.first, p.key);
             p.action = on ? 1 : 0;
-            s->SendReliableToSlot(peerSlot, a_.kind, &p, sizeof(p));
-            { std::lock_guard<std::mutex> lk(stateMutex_); lastKnown_[d.first] = on; }
-            ++sent;
+            ++attempted;
+            if (s->SendReliableToSlotForGeneration(peerSlot, peerGeneration,
+                                                   a_.kind, &p, sizeof(p))) {
+                { std::lock_guard<std::mutex> lk(stateMutex_); lastKnown_[d.first] = on; }
+                CancelPendingDelivery(peerSlot, peerGeneration, d.first);
+                ++accepted;
+            } else if (s->peerGenerationForSlot(peerSlot) == peerGeneration) {
+                QueuePendingDelivery(peerSlot, peerGeneration, d.first);
+                UE_LOGW("%s: connect-snapshot send refused key='%ls' slot=%d gen=%u -- pending retry",
+                        a_.name, d.first.c_str(), peerSlot,
+                        static_cast<unsigned>(peerGeneration));
+                ++failed;
+            } else {
+                ++failed;
+            }
         }
-        UE_LOGI("%s: connect-snapshot -- sent %d full state(s) to slot %d (of %zu indexed)",
-                a_.name, sent, peerSlot, items.size());
+        UE_LOGI("%s: connect-snapshot -- attempted=%d accepted=%d failed=%d pending=%zu "
+                "slot=%d (of %zu indexed)", a_.name, attempted, accepted, failed,
+                PendingDeliveryCount(peerSlot, peerGeneration), peerSlot, items.size());
     }
 
     void Tick() {
+        auto* s = session_.load(std::memory_order_acquire);
+        CancelStalePendingDeliveries(s);
         if (!a_.EnsureResolved()) return;
         RegisterWithScanHub();  // safety net for any order where Tick precedes Install
         if (a_.TickApply) a_.TickApply();  // finish an async apply (doors)
@@ -372,6 +397,7 @@ public:
         const auto now = std::chrono::steady_clock::now();
         if (now - lastRetry_ >= kRetryRebuildThrottle) {
             lastRetry_ = now;
+            RetryPendingDeliveries(s);
             // Retry deferred applies for instances that have streamed in since; the throttle paces
             // only the retries.
             if (!pending_.empty()) {
@@ -438,11 +464,14 @@ public:
         settling_.clear();
         size_t nP = pending_.size();
         pending_.clear();
+        size_t nD = pendingDeliveries_.size();
+        pendingDeliveries_.clear();
         std::lock_guard<std::mutex> lk(stateMutex_);
         const size_t n = lastKnown_.size();
         lastKnown_.clear();
-        if (n > 0 || nP > 0)
-            UE_LOGI("%s: OnDisconnect cleared %zu last-known + %zu pending", a_.name, n, nP);
+        if (n > 0 || nP > 0 || nD > 0)
+            UE_LOGI("%s: OnDisconnect cleared %zu last-known + %zu pending applies + "
+                    "%zu pending deliveries", a_.name, n, nP, nD);
     }
 
     // The scan-hub consumer: one shared GUObjectArray pass drives the callbacks below for every
@@ -571,6 +600,106 @@ public:
 private:
     struct Ref { void* actor; int32_t idx; };
     struct Pending { bool want; std::chrono::steady_clock::time_point deadline; };
+    struct PendingDelivery {
+        int slot;
+        uint32_t peerGeneration;
+        std::wstring key;
+    };
+
+    void QueuePendingDelivery(int slot, uint32_t peerGeneration, const std::wstring& key) {
+        for (const auto& pending : pendingDeliveries_) {
+            if (pending.slot == slot && pending.peerGeneration == peerGeneration &&
+                pending.key == key) return;
+        }
+        pendingDeliveries_.push_back(PendingDelivery{slot, peerGeneration, key});
+    }
+
+    void CancelPendingDelivery(int slot, uint32_t peerGeneration, const std::wstring& key) {
+        for (auto it = pendingDeliveries_.begin(); it != pendingDeliveries_.end();) {
+            if (it->slot == slot && it->peerGeneration == peerGeneration && it->key == key)
+                it = pendingDeliveries_.erase(it);
+            else
+                ++it;
+        }
+    }
+
+    size_t PendingDeliveryCount(int slot, uint32_t peerGeneration) const {
+        size_t count = 0;
+        for (const auto& pending : pendingDeliveries_) {
+            if (pending.slot == slot && pending.peerGeneration == peerGeneration) ++count;
+        }
+        return count;
+    }
+
+    void CancelPendingDeliveriesForSlot(int slot) {
+        for (auto it = pendingDeliveries_.begin(); it != pendingDeliveries_.end();) {
+            if (it->slot == slot) it = pendingDeliveries_.erase(it);
+            else ++it;
+        }
+    }
+
+    void CancelStalePendingDeliveriesForSlot(int slot, uint32_t peerGeneration) {
+        for (auto it = pendingDeliveries_.begin(); it != pendingDeliveries_.end();) {
+            if (it->slot == slot && it->peerGeneration != peerGeneration)
+                it = pendingDeliveries_.erase(it);
+            else
+                ++it;
+        }
+    }
+
+    void CancelStalePendingDeliveries(coop::net::Session* s) {
+        if (!s) return;
+        for (auto it = pendingDeliveries_.begin(); it != pendingDeliveries_.end();) {
+            if (s->peerGenerationForSlot(it->slot) != it->peerGeneration)
+                it = pendingDeliveries_.erase(it);
+            else
+                ++it;
+        }
+    }
+
+    void RetryPendingDeliveries(coop::net::Session* s) {
+        if (!s || pendingDeliveries_.empty()) return;
+        int accepted = 0;
+        int refused = 0;
+        int cancelled = 0;
+        for (auto it = pendingDeliveries_.begin(); it != pendingDeliveries_.end();) {
+            if (s->peerGenerationForSlot(it->slot) != it->peerGeneration) {
+                it = pendingDeliveries_.erase(it);
+                ++cancelled;
+                continue;
+            }
+            void* actor = ResolveFast(it->key);
+            if (!actor) {
+                it = pendingDeliveries_.erase(it);
+                ++cancelled;
+                continue;
+            }
+            bool on = false;
+            if (!a_.ReadState(actor, on)) {
+                ++it;
+                continue;
+            }
+            coop::net::KeyedTogglePayload p{};
+            WireKeyFromString(it->key, p.key);
+            p.action = on ? 1 : 0;
+            if (s->SendReliableToSlotForGeneration(it->slot, it->peerGeneration,
+                                                   a_.kind, &p, sizeof(p))) {
+                { std::lock_guard<std::mutex> lk(stateMutex_); lastKnown_[it->key] = on; }
+                it = pendingDeliveries_.erase(it);
+                ++accepted;
+            } else if (s->peerGenerationForSlot(it->slot) != it->peerGeneration) {
+                it = pendingDeliveries_.erase(it);
+                ++cancelled;
+            } else {
+                ++it;
+                ++refused;
+            }
+        }
+        if (accepted || cancelled || (refused && ProbeLog())) {
+            UE_LOGI("%s: connect-retry -- accepted=%d refused=%d cancelled=%d pending=%zu",
+                    a_.name, accepted, refused, cancelled, pendingDeliveries_.size());
+        }
+    }
 
     void* ResolveFast(const std::wstring& key) {
         if (!IndexCurrent()) return nullptr;  // stale-gen index = another world's actors
@@ -636,6 +765,7 @@ private:
     std::unordered_map<std::wstring, bool> lastKnown_;
 
     std::unordered_map<std::wstring, Pending> pending_;            // GT-only
+    std::vector<PendingDelivery> pendingDeliveries_;               // GT-only: generation-stamped connect rows
     std::unordered_map<std::wstring, uint8_t> holdOpen_;          // host: door key -> bitmask of holding slots
     std::unordered_map<std::wstring, std::chrono::steady_clock::time_point> settling_;  // host: door key -> deadline until which the poll skips it
     std::vector<std::pair<std::wstring, Ref>> pollScratch_;       // GT-only: reused poll snapshot buffer
