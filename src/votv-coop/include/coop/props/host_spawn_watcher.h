@@ -55,6 +55,15 @@ void DrainPendingSpawns(coop::net::Session* session);
 // (IsLiveByIndex over a small bounded set). Game thread (net-pump tick).
 void TickWatchedProps(coop::net::Session* session);
 
+// Is `actor` still sitting in the FinishSpawningActor pending-adopt queue -- finished spawning
+// this pump tick, holding no Element at the finish, and not yet drained? Membership is the
+// destroy seam's "no peer has ever been told about this actor" test: DrainPendingSpawns is what
+// mints the Element and broadcasts the PropSpawn, and it clears the queue unconditionally, so a
+// queued actor with no Element has never been on the wire. Host-side, game thread; off the game
+// thread it answers false, which leaves the caller with its pre-existing behaviour rather than
+// reading a game-thread-only vector under a race.
+bool IsPendingUnadoptedSpawn(void* actor);
+
 // Clear per-session state: the death-watch list, the pending queue and the session pointer. The
 // POST observer stays registered -- it self-gates on connected() and on not being inside a
 // mirror-spawn scope, which is all it needs, since every connected peer broadcasts its own

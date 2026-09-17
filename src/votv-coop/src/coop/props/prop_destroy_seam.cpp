@@ -13,6 +13,8 @@
 #include "coop/net/session.h"
 #include "coop/props/prop_drop_intent.h"
 #include "coop/items/coingun_sync.h"
+#include "coop/props/host_spawn_watcher.h"  // IsPendingUnadoptedSpawn, the publication test
+#include "coop/props/keyed_destroy_gate.h"
 #include "coop/props/prop_echo_suppress.h"
 #include "coop/props/prop_element_tracker.h"
 #include "coop/session/world_load_episode.h"
@@ -119,6 +121,43 @@ void DestroySeamBody(void* self) {
     // the echo and episode gates, since wire teardowns and load churn are not conversions; the
     // capture owns the wire when it returns true. A cheap class-pointer gate inside.
     if (coop::kerfur_convert::TryCaptureKerfurPropDestroy(self, destroyEid)) return;
+    // The key-only destroy gate. A zero eid is the protocol's sender-had-no-Element sentinel, so the
+    // payload below is KEY-ONLY and the receiver resolves it against whatever live actor holds the key.
+    // On the host that key can name a second actor: placing a keyed prop out of the hand enrols the
+    // world actor and THEN destroys the unexpressed in-hand display husk, which carries the box's key
+    // but was never enrolled, so it stamps eid=0 -- broadcast, it destroys the receiver's mirror of the
+    // prop just placed. FindLiveActorByKey discriminates: it is index-only (never the cold GUObjectArray
+    // scan of ResolveLiveActorByKey, which on a stale index can rediscover the dying actor and suppress
+    // every departure), and the dying actor cannot match itself (UnmarkKnownKeyedProp above evicted it;
+    // the husk was never indexed), so non-null means ANOTHER live local actor owns the key. Host-only: a
+    // client's keyed zero-eid destroy is the normal pickup shape. Second, the key's ONLY holder: the host's copy
+    // of a client-placed prop, created by HostSpawnPlacedProp with no Element or key-index entry, is
+    // published by host_spawn_watcher::DrainPendingSpawns only on the NEXT pump tick. Dying in that
+    // window it was never on the wire (a PropSpawn carries an elementId), so its key-only destroy can
+    // only land on a receiver's OWN actor under that save key. Queue membership is asked last, only for
+    // a host key-only destroy, keeping the linear walk of the 128-capped queue off every other path.
+    const bool isHost = (s->role() == coop::net::Role::Host);
+    const bool otherHolder = !keyless && PT::FindLiveActorByKey(keyStr) != nullptr;
+    const bool pendingUnadopted =
+        isHost && !keyless && !hasEid &&
+        coop::host_spawn_watcher::IsPendingUnadoptedSpawn(self);
+    if (!coop::props::ShouldBroadcastKeyedDestroyOncePublished(isHost, keyless, hasEid, otherHolder,
+                                                               pendingUnadopted)) {
+        if (pendingUnadopted) {
+            UE_LOGW("grab_hook[destroy-seam]: HOST suppressed key-only DESTROY actor=%p key='%ls' "
+                    "eid=0 -- the actor is still in the FinishSpawn pending-adopt queue, so no peer "
+                    "has ever been told it exists; broadcasting it would resolve by key onto the "
+                    "receiver's own actor. Local destroy stands.",
+                    self, keyStr.c_str());
+        } else {
+            UE_LOGW("grab_hook[destroy-seam]: HOST suppressed key-only DESTROY actor=%p key='%ls' "
+                    "eid=0 -- another live local actor still holds this key (unenrolled in-hand husk "
+                    "dying behind the placed prop); broadcasting it would destroy the receiver's "
+                    "mirror of the prop we just placed. Local destroy stands.",
+                    self, keyStr.c_str());
+        }
+        return;
+    }
     coop::net::WireKey wk{};
     wk.len = 0;
     if (!keyless) {
