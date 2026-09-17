@@ -11,6 +11,7 @@
 #include "coop/net/connect_history.h"     // the per-address connection cap at the accept edge
 #include "coop/net/net_clock.h"           // NowMs, the net layer's one steady clock
 #include "coop/net/peer_admission.h"      // the exchange state a pending entry owns
+#include "coop/net/session_watermark_reset.h"  // the session seam's clear, one named decision
 #include "coop/player/players_registry.h"
 #include "signaling_client.h"             // co-located: DialReport, the rendezvous half of a dial
 #include "ue_wrap/core/log.h"
@@ -348,6 +349,62 @@ void Session::ResetPeerRemoteState(int peerSlot) {
     // Clear the latched senderEpoch so the next connection on this slot re-latches on its first
     // packet; a reconnecting peer's fresh epoch would otherwise fail the compare.
     expectedEpoch_[peerSlot] = 0;
+}
+
+void Session::ResetRemoteStreamStateForNewSession() {
+    // remoteMutex_ held by the caller.
+    //
+    // The SESSION seam, not the slot one. ResetPeerRemoteState above runs at a per-connection close
+    // edge, and a Session that stops through Session::Stop never reaches one: Stop closes every
+    // peer itself, GNS delivers no status callback for a connection we close (the reason
+    // KickClaimed below replicates the teardown by hand), and Stop's peerConns_.exchange(0) makes
+    // any callback that does arrive resolve FindPeerSlotForConn to -1. So a re-host in one process
+    // opened holding the dead session's watermarks, and every packet from a peer whose own sendSeq_
+    // restarted at 0 -- what a peer that restarted its process sends -- read as stale for the whole
+    // next session: the puppet stood at its spawn while its player ran.
+    for (int i = 0; i < kMaxPeers; ++i) ResetPeerRemoteState(i);
+
+    // The streams ResetPeerRemoteState does not own. These have no clearer anywhere else in the
+    // tree -- not at the close edge and not in Stop's ResetPoseBatches either -- so their only
+    // zeroing was the member initialiser, run once when the process built its Session. The four
+    // host-originated ones are what a CLIENT reuses when it leaves one host and joins another in the
+    // same process: a retained watermark above the new host's fresh seq silently drops the world
+    // clock, the download sim, the dish poses and the reel corrector for the whole session.
+    for (int i = 0; i < kMaxPeers; ++i) {
+        ResetWatermarkForNewSession(hasRemoteDeskCursor_[i], lastRemoteDeskCursorSeq_[i]);
+        remoteDeskCursorStamp_[i] = 0;
+        lastReadDeskCursorStamp_[i] = 0;
+    }
+    ResetWatermarkForNewSession(hasRemoteHostClock_, lastRemoteHostClockSeq_);
+    remoteHostClockStamp_ = 0;
+    lastReadHostClockStamp_ = 0;
+    ResetWatermarkForNewSession(hasRemoteDeskSim_, lastRemoteDeskSimSeq_);
+    remoteDeskSimStamp_ = 0;
+    lastReadDeskSimStamp_ = 0;
+    ResetWatermarkForNewSession(hasRemoteDishPose_, lastRemoteDishPoseSeq_);
+    remoteDishPoseStamp_ = 0;
+    lastReadDishPoseStamp_ = 0;
+    ResetWatermarkForNewSession(hasRemoteReelPose_, lastRemoteReelPoseSeq_);
+    remoteReelPoseStamp_ = 0;
+    lastReadReelPoseStamp_ = 0;
+    // The NPC and WorldActor batches and the trash-carry / driven-prop pose queues are NOT cleared
+    // here: Session::Stop clears all four through ResetPoseBatches (session_propdrive.cpp), and
+    // Stop's running_ exchange is the only route by which a started Session becomes startable again.
+
+    // The reliable inbox, whose payload carries AUTHORITY, is erased per slot at the close edges and
+    // cleared whole in the two connectedPeerCount()==0 branches below: all per-connection closes that
+    // a teardown through Session::Stop never reaches (see the top of this function). A reused Session
+    // thus kept the dead session's delivered reliables, and event_feed's drain (event_feed.cpp:150;
+    // rightly ungated on ConnState::Connected, as a FIFO gate would defer, not discard) handed them to
+    // the next session before any of its peers existed, their senderPeerSlot naming whoever
+    // FindFreePeerSlotForClient seats there next -- or, after a client-then-host cycle in one process, US.
+    // LOCK ORDER: the caller holds remoteMutex_; reliableInboxMutex_ is taken inside it. That edge
+    // cannot cycle: every other reliableInboxMutex_ section (session.cpp TryGetReliable and the net
+    // thread's depth read, session_receive.cpp's enqueue, this file's four close-edge erase/clear
+    // sites) is pure deque work acquiring no other mutex. Nothing contends at the only call site
+    // either: Session::Start runs this before EnsureGnsInit, any socket, and the net thread.
+    { std::lock_guard<std::mutex> lk(reliableInboxMutex_);
+      RetireReceiveQueueForNewSession(reliableInbox_); }
 }
 
 int Session::connectedPeerCount() const {

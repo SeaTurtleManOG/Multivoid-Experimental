@@ -111,8 +111,17 @@ bool Session::Start(const Config& cfg) {
         std::random_device rd;
         do { ownEpoch_ = rd(); } while (ownEpoch_ == 0);
     }
-    // Stale latches from a previous cycle on this Session instance cleared.
-    for (int i = 0; i < kMaxPeers; ++i) expectedEpoch_[i] = 0;
+    // Stale RECEIVE state from a previous cycle on this Session instance cleared: the per-slot
+    // epoch latches, and with them every per-peer and per-session stream watermark no other
+    // boundary clears, and the reliable inbox. Only the latches were cleared here before, so a
+    // reused Session opened with a FRESH epoch latch beside a RETAINED pose store -- it re-latched
+    // on the first packet of the new session and then stale-dropped that packet and every one after
+    // it, because lastRemoteSeq_ still held the dead session's terminal sequence while the peer, a
+    // restarted process, sent from 0 again. The pose batches and pose queues are Stop's
+    // (ResetPoseBatches) and are not repeated here. No lock is needed at this point (the net thread
+    // is not spawned yet, as the local flags below rely on); it is taken because
+    // ResetPeerRemoteState's contract asks for it and it is uncontended here.
+    { std::lock_guard<std::mutex> lk(remoteMutex_); ResetRemoteStreamStateForNewSession(); }
     // The per-slot occupancy generations too: a reused Session must not open with slots that look
     // occupied. The counter is not reset, so generations stay unique across cycles and a stale
     // captured token can never alias a fresh occupant.

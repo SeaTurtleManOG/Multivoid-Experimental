@@ -443,7 +443,17 @@ void OnDoorOpenRequest(const coop::net::KeyedTogglePayload& payload, uint8_t sen
 
 void OnPeerLeft(int peerSlot) {
     if (peerSlot <= 0 || peerSlot >= static_cast<int>(coop::players::kMaxPeers)) return;
-    g_door.OnPeerLeft(static_cast<uint8_t>(peerSlot));  // doors are the one channel with a hold register
+    const auto slot = static_cast<uint8_t>(peerSlot);
+    // Every channel can own generation-stamped connect rows. Doors additionally
+    // consume this callback for the hold register; the other six only cancel
+    // delivery work belonging to the departed occupant.
+    g_door.OnPeerLeft(slot);
+    g_light.OnPeerLeft(slot);
+    g_lightGroup.OnPeerLeft(slot);
+    g_container.OnPeerLeft(slot);
+    g_garage.OnPeerLeft(slot);
+    g_appliance.OnPeerLeft(slot);
+    g_doorBox.OnPeerLeft(slot);
 }
 
 void QueueConnectBroadcastForSlot(int peerSlot) {
