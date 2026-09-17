@@ -8,10 +8,13 @@
 #include "ue_wrap/core/game_thread.h"
 #include "ue_wrap/core/log.h"
 #include "ue_wrap/core/reflection.h"
+#include "ue_wrap/core/sdk_profile_names.h"
+#include "ue_wrap/devices/kitchen_repair.h"
 #include "ue_wrap/engine/engine.h"
 
 #include <atomic>
 #include <cstdint>
+#include <cwchar>
 
 namespace ue_wrap::appliance {
 namespace {
@@ -19,6 +22,7 @@ namespace {
 namespace R = reflection;
 namespace E = engine;
 namespace GT = game_thread;
+namespace P = profile;
 
 // One descriptor per appliance class. A row that names `applyParam` applies through a named setter
 // taking the bool as that parameter (serverBox's visual(active), which writes `active` and calls
@@ -40,9 +44,19 @@ struct Desc {
     // True on the shower row, whose tick can raise this machine's sleep meter: the apply turns the
     // tick off after the verb, and OnTickOffBeginPlayPost turns it off again at BeginPlay.
     bool           tickOff = false;
+    // True on the kitchen row: an applied ON on an oven this machine never fixed also runs the oven's
+    // own fix() (ApplyKitchenRepair).
+    bool           repairOnOn = false;
     // Resolved with the row: SetActorTickEnabled resolved and that BeginPlay observer registered. A
     // tickOff row without both is not synced: TryReadState and ApplyState refuse it outright.
     bool           tickOffReady = false;
+    // Resolved with a repairOnOn row, all by name: the oven's `fixed` and `widget` members and its
+    // parameterless fix(). Without all of them and the widget's Visibility, repairReady stays false
+    // and the row applies exactly as a row without the repair step.
+    int32_t        fixedOff = -1;
+    int32_t        widgetOff = -1;
+    void*          fixFn = nullptr;
+    bool           repairReady = false;
 };
 
 // faucet_C's tap is `active`: actionOptionIndex with action 5 negates it and calls upd(), which
@@ -64,7 +78,7 @@ Desc g_descs[] = {
     { L"faucet_C",         L"active",       -1,     L"upd",       nullptr, nullptr, -1, nullptr, nullptr },
     { L"sink_C",           L"isOn",         0x0278, L"updIsOn",   L"upd",  nullptr, -1, nullptr, nullptr },
     { L"prop_shower_C",    L"running_cold", 0x0298, L"updWater",  nullptr, nullptr, -1, nullptr, nullptr, nullptr, true },
-    { L"kitchen_C",        L"Active",       0x02E1, L"upd",       nullptr, nullptr, -1, nullptr, nullptr },
+    { L"kitchen_C",        L"Active",       0x02E1, L"upd",       nullptr, nullptr, -1, nullptr, nullptr, nullptr, false, true },
     { L"serverBox_C",      L"Active",       0x03D5, L"visual",    nullptr, nullptr, -1, nullptr, nullptr, L"active" },
     { L"wallunit_tapes_C", L"Active",       0x0290, L"upd",       nullptr, nullptr, -1, nullptr, nullptr },
 };
@@ -104,6 +118,60 @@ void OnTickOffBeginPlayPost(void* self, void* /*function*/, void* /*params*/) {
     if (!d || !d->tickOff || d->boolOff < 0) return;
     if (*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(self) + d->boolOff))
         E::SetActorTickEnabled(self, false);
+}
+
+int32_t g_widgetVisibilityOff = -1;    // Widget's Visibility byte, resolved with the kitchen row
+
+// Visibility is a native member of the Widget class, so every widget holds it at the same offset.
+// Its size is checked: a wider field reads as unresolved rather than as the wrong byte.
+int32_t ResolveWidgetVisibilityOffset() {
+    if (g_widgetVisibilityOff >= 0) return g_widgetVisibilityOff;
+    void* widgetCls = R::FindClass(P::name::WidgetClass);
+    if (!widgetCls) return -1;
+    for (const R::StructFieldInfo& f : R::EnumerateStructFields(widgetCls)) {
+        if (::_wcsicmp(f.name.c_str(), L"Visibility") == 0 && f.size == 1) {
+            g_widgetVisibilityOff = f.offset;
+            break;
+        }
+    }
+    return g_widgetVisibilityOff;
+}
+
+// The kitchen row's step after its Active write and upd(). The decision is DecideKitchenRepair's.
+// fix() sets fixed, runs upd() again, and removes and clears the repair widget: the verb the oven's
+// own loadData runs for a saved fixed oven. It does not write Active, so the channel's next poll
+// reads the applied value and sends nothing back.
+void ApplyKitchenRepair(void* a, const Desc& d, bool on) {
+    if (!on || !d.repairReady) return;
+    const char* base = reinterpret_cast<const char*>(a);
+    KitchenRepairInputs in;
+    in.on = on;
+    in.ready = true;
+    in.fixed = *reinterpret_cast<const uint8_t*>(base + d.fixedOff) != 0;
+    void* const widget = *reinterpret_cast<void* const*>(base + d.widgetOff);
+    in.widgetLive = widget && R::IsLive(widget);
+    if (in.widgetLive) {
+        in.widgetVisibility = *reinterpret_cast<const uint8_t*>(
+            reinterpret_cast<const char*>(widget) + g_widgetVisibilityOff);
+    }
+    switch (DecideKitchenRepair(in)) {
+    case KitchenRepairStep::None:
+        return;
+    case KitchenRepairStep::SkipWidgetOpen:
+        UE_LOGI("appliance: %ls repair skipped on apply key='%ls' -- its repair widget is open "
+                "(Visibility=%u); the fix is left to the player using it",
+                d.className, GetKeyString(a).c_str(), static_cast<unsigned>(in.widgetVisibility));
+        return;
+    case KitchenRepairStep::Repair: {
+        ParamFrame f(d.fixFn);
+        const bool ok = f.valid() && Call(a, f);
+        const bool fixedNow = *reinterpret_cast<const uint8_t*>(base + d.fixedOff) != 0;
+        UE_LOGI("appliance: %ls repaired on apply key='%ls' fix=%d fixed=%d widget=%s",
+                d.className, GetKeyString(a).c_str(), ok ? 1 : 0, fixedNow ? 1 : 0,
+                in.widgetLive ? "closed" : "none");
+        return;
+    }
+    }
 }
 
 }  // namespace
@@ -168,6 +236,29 @@ bool EnsureResolved() {
             }
         }
         d.tickOffReady = tickOffReady;
+        // A repairOnOn row resolves its repair inputs before `cls` is published, like tickOff. A
+        // miss is logged here, once, and leaves the row applying without the repair step.
+        bool repairReady = false;
+        if (d.repairOnOn) {
+            const int32_t fixedOff = R::FindPropertyOffset(cls, L"fixed");
+            const int32_t widgetOff = R::FindPropertyOffset(cls, L"widget");
+            void* fixFn = R::FindFunction(cls, L"fix");
+            const int fixParams = fixFn ? static_cast<int>(R::FunctionParams(fixFn).size()) : -1;
+            const int32_t visOff = ResolveWidgetVisibilityOffset();
+            repairReady = fixedOff >= 0 && widgetOff >= 0 && fixParams == 0 && visOff >= 0;
+            if (repairReady) {
+                d.fixedOff = fixedOff;
+                d.widgetOff = widgetOff;
+                d.fixFn = fixFn;
+                UE_LOGI("appliance: %ls repair-on-apply ready (fixed@0x%04X widget@0x%04X fix=%p "
+                        "Visibility@0x%04X)", d.className, fixedOff, widgetOff, fixFn, visOff);
+            } else {
+                UE_LOGW("appliance: %ls repair-on-apply unavailable (fixed=%d widget=%d fix=%p "
+                        "params=%d Visibility=%d) -- an applied ON will not fix an unfixed oven",
+                        d.className, fixedOff, widgetOff, fixFn, fixParams, visOff);
+            }
+        }
+        d.repairReady = repairReady;
         d.cls = cls;
         d.boolOff = off;
         d.fn = fn;
@@ -247,6 +338,9 @@ bool ApplyState(void* a, bool on) {
         ParamFrame f2(d->fn2);
         if (f2.valid()) Call(a, f2);
     }
+    // kitchen: an ON on an oven this machine never fixed also runs its fix(), unless its repair
+    // widget is open. The step's result is its own log line; `ok` stays the apply's.
+    if (d->repairOnOn) ApplyKitchenRepair(a, *d, on);
     return ok;
 }
 

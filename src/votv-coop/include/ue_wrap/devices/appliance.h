@@ -41,9 +41,11 @@ bool TryReadState(void* a, bool& on);
 
 // Drive the appliance to `on`: serverBox via visual(active); the rest by direct-writing the
 // bool then calling the row's no-arg refresh verb (upd/updIsOn/updWater), the verb the class
-// runs after its own toggle, and on the shower turning the actor tick off after it. MUST run on
-// the game thread. False on null / unresolved; a shower whose tick-off is not ready (the tick
-// call or its BeginPlay observer unresolved) is refused before the bool is written.
+// runs after its own toggle, and on the shower turning the actor tick off after it. On the
+// kitchen oven an ON also runs the oven's own fix() when this machine never fixed it, unless its
+// repair widget is open (ue_wrap/devices/kitchen_repair.h). MUST run on the game thread. False on
+// null / unresolved; a shower whose tick-off is not ready (the tick call or its BeginPlay
+// observer unresolved) is refused before the bool is written.
 bool ApplyState(void* a, bool on);
 
 }  // namespace ue_wrap::appliance
