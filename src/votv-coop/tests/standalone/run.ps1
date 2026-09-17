@@ -126,6 +126,26 @@ try {
     Invoke-Case 'candidate_01-fixed' $IncludeRoot `
         @((Join-Path $TestRoot 'candidate_01_param_frame_boundary.cpp'), $Call) 'pass'
 
+    # candidate_08 -- both arms across coop/props/place_queue_admission.h. The pre-fix fallback
+    # tests capacity alone, ahead of any eligibility sample, so eligibility is not a term in the
+    # decision: that is what the fixed policy changed and what the pre-fix arm must fail on.
+    Invoke-Case 'candidate_08-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_08_place_queue_admission.cpp')) 'pass'
+    $Pre08 = New-PreFixIncludeRoot 'candidate_08' @('coop\props\place_queue_admission.h')
+    Write-Output $Pre08.Note
+    Invoke-Case 'candidate_08-prefix' $Pre08.Root `
+        @((Join-Path $TestRoot 'candidate_08_place_queue_admission.cpp')) 'fail'
+
+    # candidate_12 -- both arms across coop/props/drive_place_authorship.h. The pre-fix fallback is
+    # `isDriveClass && freshBirth`, which is what the note's old position inside `if (freshBirth)`
+    # amounted to.
+    Invoke-Case 'candidate_12-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_12_drive_place_authorship.cpp')) 'pass'
+    $Pre12 = New-PreFixIncludeRoot 'candidate_12' @('coop\props\drive_place_authorship.h')
+    Write-Output $Pre12.Note
+    Invoke-Case 'candidate_12-prefix' $Pre12.Root `
+        @((Join-Path $TestRoot 'candidate_12_drive_place_authorship.cpp')) 'fail'
+
     # CASES-END (each integration step appends its candidates above this line)
 
     # The file list and the case list must agree: a candidate source nobody registered is

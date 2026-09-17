@@ -38,6 +38,8 @@ void NoteParkEvict(const std::wstring& key);
 void NoteKeyReadable(void* actor, int tries);
 
 // An entry left the pending vector. `verdict` names the exit; `tries` is the drain ticks it waited.
+// Besides the drain's own exits, a full vector can evict its oldest non-extraction entry to admit a
+// container-extraction birth; that entry leaves as `evicted-for-container-extract`.
 void NoteDrainExit(void* actor, const char* verdict, int tries, const std::wstring& key);
 
 // Print the tallies and the histogram. Totals are cumulative, so each print is the whole run so
