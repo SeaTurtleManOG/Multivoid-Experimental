@@ -126,6 +126,14 @@ try {
     Invoke-Case 'candidate_01-fixed' $IncludeRoot `
         @((Join-Path $TestRoot 'candidate_01_param_frame_boundary.cpp'), $Call) 'pass'
 
+    # candidate_02 -- both arms across coop/dispatch/prop_spawn_gate.h.
+    Invoke-Case 'candidate_02-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_02_prop_spawn_gate.cpp')) 'pass'
+    $Pre02 = New-PreFixIncludeRoot 'candidate_02' @('coop\dispatch\prop_spawn_gate.h')
+    Write-Output $Pre02.Note
+    Invoke-Case 'candidate_02-prefix' $Pre02.Root `
+        @((Join-Path $TestRoot 'candidate_02_prop_spawn_gate.cpp')) 'fail'
+
     # CASES-END (each integration step appends its candidates above this line)
 
     # The file list and the case list must agree: a candidate source nobody registered is
