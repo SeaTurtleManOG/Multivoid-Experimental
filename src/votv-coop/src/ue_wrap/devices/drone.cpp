@@ -326,4 +326,32 @@ void RepointContainer(void* drone) {
     }
 }
 
+namespace {
+// The sack's class name. The walk also accepts a subclass; the game ships none.
+constexpr const wchar_t* kSackClassName = L"prop_dronesack_C";
+}  // namespace
+
+bool IsDroneSack(void* actor) {
+    if (!actor) return false;
+    void* cls = R::ClassOf(actor);
+    for (int hops = 0; hops < 16 && cls; ++hops) {
+        if (R::NameEquals(R::NameOf(cls), kSackClassName)) return true;
+        cls = R::SuperStructOf(cls);
+    }
+    return false;
+}
+
+bool MarkSackTakenByDrone(void* actor) {
+    if (!actor) return false;
+    const int32_t off = R::FindPropertyOffset(R::ClassOf(actor), L"takenByDrone");
+    if (off < 0) {
+        UE_LOGW("drone: takenByDrone did not resolve on %p -- not written; the sack's own respawn "
+                "runs", actor);
+        return false;
+    }
+    // A Blueprint bool variable is a one-byte native bool.
+    *reinterpret_cast<bool*>(reinterpret_cast<char*>(actor) + off) = true;
+    return true;
+}
+
 }  // namespace ue_wrap::drone

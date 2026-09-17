@@ -171,6 +171,18 @@ try {
     Invoke-Case 'candidate_15-prefix' $Pre15.Root `
         (@((Join-Path $TestRoot 'candidate_15_container_custody.cpp')) + $Wire15) 'fail'
 
+    # ---- APPENDED (the drone sack respawn policy). Self-contained; keep at the end of the case
+    # list so a textual conflict with another append resolves mechanically.
+    # candidate_16 -- both arms across coop/props/destroy_respawn_policy.h. The pre-fix fallback in
+    # the test source never forces: before the fix no destroy application marked the sack taken, so
+    # a client receiver always ran the sack's own respawn.
+    Invoke-Case 'candidate_16-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_16_destroy_respawn_policy.cpp')) 'pass'
+    $Pre16 = New-PreFixIncludeRoot 'candidate_16' @('coop\props\destroy_respawn_policy.h')
+    Write-Output $Pre16.Note
+    Invoke-Case 'candidate_16-prefix' $Pre16.Root `
+        @((Join-Path $TestRoot 'candidate_16_destroy_respawn_policy.cpp')) 'fail'
+
     # CASES-END (each integration step appends its candidates above this line)
 
     # The file list and the case list must agree: a candidate source nobody registered is

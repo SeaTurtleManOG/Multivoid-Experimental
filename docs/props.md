@@ -139,6 +139,11 @@ produced on this peer (`coop/props/prop_wire_parity`); a fresh mirror starts kin
 is remote-owned. A spawn or destroy the receiver applied is marked so the symmetric observer
 does not broadcast it back (`coop/props/prop_echo_suppress`).
 
+A client applying another peer's destroy of the drone's sack does not run the sack's own respawn.
+The sack's destroy handler spawns a new sack at the drone unless the drone took it, so the client
+marks its copy taken before the engine call; the host keeps its native branch, and the replacement
+its copy spawns reaches every client as an ordinary birth (`coop/props/remote_prop_destroy`).
+
 ### Sticking to a wall
 
 Wall-attachable props (the cameras) commit their stick inside the Blueprint; the one visible seam
@@ -275,6 +280,7 @@ edge that reaches a joiner before the prop it names is kept until the prop resol
 | A prop that a pushed prop knocks moves on the host only: the driven-prop channel is fed by verbs, and a knock is none. One drill run measured a knocked prop moving 25.1 cm on the host and resting 15.9 cm from the client's copy | `[V]` the broom drill's push phases (`harness/autotest/autotest_broomstroke.cpp`); `coop/items/broom_push` streams only what a stroke itself pushed |
 | A prop parked under the host's drive cannot be grabbed on a client while the drag lasts: the park turns the body kinematic and the game's grab needs a simulating one. It is grabbable again after the end edge | `[V]` `coop/props/prop_drive_stream` parks with `DriveSimulate(mesh, false)`; `coop/props/prop_wire_parity` records why a kinematic mirror is ungrabbable |
 | A pose can arrive milliseconds before the spawn that names its prop; that is a race, not a defect, and a ledger tells the two apart instead of warning per packet | `[V]` `coop/props/unresolved_pose_ledger` |
+| When a client's own drone takes the drone's sack while the host still holds its copy, the host's copy was never marked taken, so applying that destroy runs the host's native respawn at the host's drone; whether the host's drone takes that new sack again, keeping the take, or it stays for every peer, losing it, is not established | `[RD]` `drone_C::putSackOn` marks only the copy it runs on, and no message carries the mark; `coop/props/remote_prop_destroy` keeps a host's native respawn. The outcome is unverified `[?]` |
 
 ## Code map
 
