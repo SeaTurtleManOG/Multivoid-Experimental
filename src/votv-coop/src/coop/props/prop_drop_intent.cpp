@@ -11,6 +11,7 @@
 #include "coop/props/prop_save_data.h"
 #include "coop/props/prop_element_tracker.h"// GetPropElementIdForActor, ResolveLiveActorByKey   
 #include "coop/props/container_contents_sync.h"  // TakeObjInFlight -- mark a container-extraction birth
+#include "coop/props/container_custody.h"        // the container custody ARM
 #include "coop/props/place_queue_admission.h"   // ClassifyPlaceQueueArrival -- the pending-place cap policy
 #include "coop/props/drive_place_authorship.h"   // NotesDrivePayloadAuthorship -- the drive-birth note policy
 #include "coop/session/world_load_episode.h"  // InEpisode (quiet during the join loadObjects churn)
@@ -503,6 +504,14 @@ void OnPropDropIntent(coop::net::Session& session, const coop::net::PropDropInte
         UE_LOGI("[PROP-DROP] HOST spawned client-placed prop key='%ls' cls='%ls' slot=%u at (%.1f,%.1f,%.1f) "
                 "-- FinishSpawn watcher broadcasts it this tick",
                 key.c_str(), cls.c_str(), senderSlot, p.locX, p.locY, p.locZ);
+        // The container custody ARM. HERE, once HostSpawnPlacedProp has returned a live actor. There is no
+        // element id at this statement yet (the host's FinishSpawn callback only ENQUEUES --
+        // host_spawn_watcher.h -- and DrainPendingSpawns adopts on the next tick, which is where
+        // the eid is minted and where the custody Tick consumes). senderSlot reached us already
+        // range-checked to [1, kMaxPeers) in event_dispatch_intent.cpp's PropDropIntent case, so
+        // the arm inherits that check for free.
+        coop::props::container_custody::NoteHostSpawnForIntent(actor, key, cls,
+                                                               static_cast<int>(senderSlot));
     }
 }
 

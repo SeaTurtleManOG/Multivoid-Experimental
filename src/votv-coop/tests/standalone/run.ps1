@@ -146,6 +146,31 @@ try {
     Invoke-Case 'candidate_12-prefix' $Pre12.Root `
         @((Join-Path $TestRoot 'candidate_12_drive_place_authorship.cpp')) 'fail'
 
+    # ---- APPENDED (the container custody park). Self-contained; keep at the end of
+    # the case list so a textual conflict with another append resolves mechanically.
+    # candidate_15 -- both arms across coop/props/container_custody.h. The pre-fix fallback in the
+    # test source is an earlier draft of the custody store: the author slot narrowed to uint8_t, no
+    # author-generation binding, no class binding, no arm-once rule, no enrolled-key re-check, no
+    # fresh-empty refusal, an enumeration seam called with no target and no headroom whose
+    # outComplete is ignored, no nested-slot test, no eviction cap, and a consume that drops the map
+    # entry without its FIFO copy. Each of those is a defect found in that draft.
+    #
+    # This case links the SHIPPED record codec rather than restating it (one implementation, not a copy):
+    # coop/items/save_record_wire.cpp, and coop/interactables/signal_wire.cpp because SerSave defers
+    # signal rows to it. The test TU supplies the single ue_wrap::log::Write those two need.
+    $Wire15 = @(
+        (Join-Path $SourceRoot 'src\coop\items\save_record_wire.cpp'),
+        (Join-Path $SourceRoot 'src\coop\interactables\signal_wire.cpp'))
+    foreach ($W in $Wire15) {
+        if (!(Test-Path -LiteralPath $W)) { throw "candidate_15 source not found: $W" }
+    }
+    Invoke-Case 'candidate_15-fixed' $IncludeRoot `
+        (@((Join-Path $TestRoot 'candidate_15_container_custody.cpp')) + $Wire15) 'pass'
+    $Pre15 = New-PreFixIncludeRoot 'candidate_15' @('coop\props\container_custody.h')
+    Write-Output $Pre15.Note
+    Invoke-Case 'candidate_15-prefix' $Pre15.Root `
+        (@((Join-Path $TestRoot 'candidate_15_container_custody.cpp')) + $Wire15) 'fail'
+
     # CASES-END (each integration step appends its candidates above this line)
 
     # The file list and the case list must agree: a candidate source nobody registered is

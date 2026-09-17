@@ -29,6 +29,7 @@
 #include "coop/interactables/floppy_slot_sync.h"
 #include "coop/interactables/floppybox_sync.h"  // the disc crate LIFO lane
 #include "coop/props/container_contents_sync.h"  // the world-container GObjStack slice
+#include "coop/props/container_custody.h"        // the host-side container custody park
 #include "coop/interactables/signal_catch_sync.h"
 #include "coop/interactables/signal_sync.h"
 #include "coop/player/movement_ledger.h"
@@ -193,6 +194,7 @@ void Install(coop::net::Session& session) {
     coop::laptop_buffer_sync::Install(&session);  // the PC buffer quad
     coop::floppybox_sync::Install(&session);  // the disc crate stack
     coop::props::container_contents_sync::Install(&session);  // container contents
+    coop::props::container_custody::Install(&session);  // container custody park (host-only by self-gate)
     coop::desk_cursor_sync::Install(&session);  // coords-panel live-cursor unreliable motion stream (interpolated mirror)
     coop::desk_input_sync::Install(&session);  // the claim-free field-granular desk input lane
     coop::desk_snd_fx::Install(&session);  // desk audio-effect mirror (Func-patch audio seam)
@@ -457,6 +459,7 @@ DisconnectStats DisconnectAll() {
     coop::laptop_buffer_sync::OnDisconnect();  // quad shadow + assembler + selftest
     coop::floppybox_sync::OnDisconnect();  // box shadows + taken-ring + pendings
     coop::props::container_contents_sync::OnDisconnect();  // dirty set + retry + parked + assembler
+    coop::props::container_custody::OnDisconnect();  // custody park: no park, and no counter, survives a session
     coop::dev::container_selftest::OnDisconnect();  // [dev] re-arm the circle on reconnect
     coop::dev::floppy_selftest::OnDisconnect();  // [dev] re-arm the disc episodes on reconnect
     coop::dev::hookdrag_selftest::OnDisconnect();  // [dev] re-arm the drag on reconnect
@@ -600,6 +603,7 @@ void TickGameplay(coop::net::Session& session, bool isConnected, bool isHost,
     if (!isHost) { PP::Scope _s{PP::Bucket::Interactable}; ue_wrap::ScopedWalkTimer _w{"sync:prop_drive_stream"}; coop::prop_drive_stream::TickApplyAndDrive(session); }  // CLIENT: park + drive the host's driven props (the host originates them and never receives any)
     { PP::Scope _s{PP::Bucket::TrashWatch};    coop::host_spawn_watcher::TickWatchedProps(&session); }  // ambient-prop (pinecone) SetLifeSpan-expiry / consumption despawn -> PropDestroy(eid)
     { PP::Scope _s{PP::Bucket::TrashWatch};    coop::host_spawn_watcher::DrainPendingSpawns(&session); }  // adopt+express FinishSpawningActor Func-seam spawns (R-drop/place/Q-menu) one tick after Finish (key restored, hand actor excluded)
+    { PP::Scope _s{PP::Bucket::TrashWatch};    coop::props::container_custody::Tick(&session); }  // custody park: sweep the parks + consume the ARMED one -- IMMEDIATELY after DrainPendingSpawns, which is where the eid it waits for is minted
     if (isHost) { PP::Scope _s{PP::Bucket::Interactable}; coop::broom_push::Tick(); }  // HOST: stream the props and clumps a broom stroke pushed (AFTER the drain above, which names the trash that same stroke dispensed)
     { PP::Scope _s{PP::Bucket::TrashWatch};    coop::prop_drop_intent::Tick(&session); }  // CLIENT: author a PropDropIntent for a detected place whose Key is parked (cheap no-op when empty / on host)
     { PP::Scope _s{PP::Bucket::TrashWatch};    coop::kerfur_convert::Tick(); }  // drain deferred kerfur conversion requests/converges (cheap no-op when empty)

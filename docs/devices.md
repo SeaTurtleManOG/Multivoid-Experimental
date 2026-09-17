@@ -87,6 +87,23 @@ record whose class descends from the container class carries a sentinel there in
 when a slice is sent and again when one is applied, since enforcing it only on the way out would
 trust every sender to be this build -- and the nested container arrives empty rather than broken.
 
+Contents are addressed by the container's element id; custody is addressed by its persistent key.
+Those are different names for the same box, and picking one up separates them: the client's grab
+destroys the host's actor, and with it the host's only addressor for that container's slice, so the
+box the client puts back down is a fresh actor with a fresh id and an empty slice. The host holds
+those contents at the moment of the destroy, so the repair is entirely host-local: park the record
+set as the actor dies, arm it only when the same peer, in the same slot occupancy, re-places the
+same key under the same class as the first spawn after that destroy, and write it into the new
+container's own freshly resolved slot on the next tick, once the id exists. The host records that
+write as its own change to the container, the way its verb edge records one, so the arbitration
+above refuses any client slice for that container inside the conflict window after the write and answers
+it with the host's contents, as after a host verb edge. Nothing new goes on the wire; the
+restored contents then fan out on the ordinary contents lane. Every step that cannot be proved safe
+refuses instead, by name, in the host log -- an aliased slot, a nested record naming a slot
+something else now owns, an enumeration that could not be shown complete, a container re-keyed at
+adoption -- and a refusal leaves exactly the empty box the unfixed build leaves
+(`coop/props/container_custody`). None of this has been run in a game yet.
+
 ### Keypads and locks
 
 A keypad is a typed digit buffer plus three state bits, and its accept verb is unreachable from
@@ -252,6 +269,8 @@ own re-take is touched and an ejecting peer behaves exactly as it does in single
 | the balance | the host | one-way, absolute, on change |
 | an order | the client names the row; the host performs and prices | an intent |
 | a coin gun sale | the client names the prop; the host prices, mints and destroys | an intent ahead of the destroy |
+| a world container's contents | the host arbitrates; the peer whose verb fired authors | the container's `GObjStack` slice, by element id, compare-and-swap against the last published hash |
+| a world container's contents ACROSS a client's carry | the host alone | a host-local park keyed by (key, class, author slot, that slot's occupancy generation, world generation); never on the wire |
 | a device's floppy slot | the host | a 1 Hz digest-gated poll; a peer claims the outcome of its own insert or eject, and the host's canonical is the answer |
 
 ## Wire messages
@@ -265,6 +284,7 @@ own re-take is touched and an ejecting peer behaves exactly as it does in single
 | `BalanceSync` | the host to all | the absolute balance |
 | `OrderRequest`, `OrderRefused` | a client to the host; the host to one client | the items by row; a refusal and its reason |
 | `CoinGunSell`, `CoinGunResult`, `CoinCollect` | a client to the host; the host to one client; a client to the host | the sold prop's key; the outcome; a coin the client tripped |
+| `ContainerContents` | each peer, arbitrated and relayed by the host | a chunked blob: the element id, the base hash the author edited from, and the container's records. A nested container's own slot index rides as a sentinel, because a real value names a slot in the SENDER's array |
 | `FloppySlotState` | a peer to the host with a claim; the host to all with the canonical | one device's slot, or a set of them: the type, the writes, the rows and the save JSON |
 
 ## Late join

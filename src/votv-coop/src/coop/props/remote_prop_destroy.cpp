@@ -9,6 +9,7 @@
 // convert paths share it). Game thread only (the event drain and the quiescence sweep); no
 // mutex.
 
+#include "coop/props/container_custody.h"   // the host-side container custody capture
 #include "coop/props/remote_prop.h"
 #include "remote_prop_internal.h"  // impl-private (src-local), NOT under include/
 
@@ -102,6 +103,12 @@ void DestroyResolvedLocalActor_(void* actor, const std::wstring& keyW,
     // GC), and a rooted pending-kill actor would leak its object-array slot forever. A harmless
     // no-op on a save-loaded native or a keyed prop.
     coop::trash_mirror::Unpin(actor);
+    // The container custody CAPTURE. Before the engine kills the actor, and the actor is dereferenced live
+    // from the log line above through here. UNCONDITIONAL: the custody gate needs more than this
+    // TU's role read (a connected session and the author-slot latch), so the module holds its own
+    // session pointer and self-gates on role, session and latch. On a client, and on a host whose
+    // destroy was not client-authored, this costs one function call and returns.
+    coop::props::container_custody::CaptureForDyingContainer(actor, keyW);
     R::CallFunction(actor, g_destroyActorFn, nullptr);
 }
 
