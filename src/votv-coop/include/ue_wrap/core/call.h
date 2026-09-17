@@ -24,7 +24,10 @@ public:
 
     // A resolved UFunction. buf_ may be empty for a no-param function (valid: the
     // call passes a null params buffer). Param read/write paths guard buf_ size.
+    // `ready()` is the stricter dispatch boundary: one failed named write poisons
+    // this per-call frame so its untouched/default bytes cannot reach ProcessEvent.
     bool valid() const { return fn_ != nullptr; }
+    bool ready() const { return valid() && !writeFailed_; }
     void* function() const { return fn_; }
     void* data() { return buf_.empty() ? nullptr : buf_.data(); }
 
@@ -81,6 +84,7 @@ private:
     void* fn_ = nullptr;
     const Metadata* meta_ = nullptr;
     std::vector<uint8_t> buf_;
+    bool writeFailed_ = false;
 };
 
 // Invoke `frame` on `object` (reflection::CallFunction under the hood). OUT
