@@ -385,6 +385,23 @@ void DrainPendingSpawns(coop::net::Session* s) {
     g_pendingFinished.clear();
 }
 
+bool IsPendingUnadoptedSpawn(void* actor) {
+    if (!actor) return false;
+    // g_pendingFinished is game-thread-only state. The destroy seam that asks this question is
+    // itself game-thread-only (prop_destroy_seam.cpp OnK2DestroyFunc), so this is a guard, not a
+    // path: off the game thread the honest answer is "unknown", and false is the answer that
+    // leaves the caller's behaviour exactly as it was before this predicate existed.
+    if (!GT::IsGameThread()) return false;
+    // Match the internal index as well as the address: an entry whose actor was destroyed and
+    // whose address the engine recycled into a different object would otherwise read as a
+    // membership hit and suppress an unrelated destroy.
+    const int32_t idx = R::InternalIndexOf(actor);
+    for (const PendingFinishedSpawn& e : g_pendingFinished) {
+        if (e.actor == actor && e.idx == idx) return true;
+    }
+    return false;
+}
+
 void OnDisconnect() {
     g_watched.clear();
     g_pendingFinished.clear();

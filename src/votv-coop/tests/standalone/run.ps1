@@ -126,6 +126,28 @@ try {
     Invoke-Case 'candidate_01-fixed' $IncludeRoot `
         @((Join-Path $TestRoot 'candidate_01_param_frame_boundary.cpp'), $Call) 'pass'
 
+    # candidate_11 -- both arms across coop/props/keyed_destroy_gate.h. The pre-fix fallback is the
+    # seam's pre-fix behaviour, `keyless ? hasEid : true`: everything keyed went on the wire whatever
+    # the role, Element row or other key holders said.
+    Invoke-Case 'candidate_11-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_11_keyed_destroy_gate.cpp')) 'pass'
+    $Pre11 = New-PreFixIncludeRoot 'candidate_11' @('coop\props\keyed_destroy_gate.h')
+    Write-Output $Pre11.Note
+    Invoke-Case 'candidate_11-prefix' $Pre11.Root `
+        @((Join-Path $TestRoot 'candidate_11_keyed_destroy_gate.cpp')) 'fail'
+
+    # ---- APPENDED (the unadopted spawn destroy gate). Self-contained; keep at the end of the
+    # case list so a textual conflict with another append resolves mechanically.
+    # candidate_13 -- both arms across coop/props/keyed_destroy_gate.h. The pre-fix fallback in the
+    # test source is the keyed destroy gate as it stood before this refinement, so the single
+    # failing assertion in the pre-fix arm is the refinement and nothing else.
+    Invoke-Case 'candidate_13-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_13_unadopted_spawn_destroy_gate.cpp')) 'pass'
+    $Pre13 = New-PreFixIncludeRoot 'candidate_13' @('coop\props\keyed_destroy_gate.h')
+    Write-Output $Pre13.Note
+    Invoke-Case 'candidate_13-prefix' $Pre13.Root `
+        @((Join-Path $TestRoot 'candidate_13_unadopted_spawn_destroy_gate.cpp')) 'fail'
+
     # CASES-END (each integration step appends its candidates above this line)
 
     # The file list and the case list must agree: a candidate source nobody registered is
