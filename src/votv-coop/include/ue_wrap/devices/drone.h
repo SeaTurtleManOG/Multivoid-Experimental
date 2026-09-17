@@ -92,4 +92,18 @@ void WriteGateFields(void* drone, bool canTakeOff, bool hasSack);
 // container (Aprop_inventoryContainer_drone_C) so openPropInv opens it. Idempotent. Game thread.
 void RepointContainer(void* drone);
 
+// ---- the sack (prop_dronesack_C) -------------------------------------------------------------
+// The drone's cargo front end. Its destroy handler spawns a new sack at the drone unless its
+// takenByDrone flag is set, which drone_C::putSackOn sets just before destroying the sack it takes.
+
+// True if `actor`'s class is prop_dronesack_C or derives from it: a SuperStruct walk comparing
+// class names, so it needs no class resolve and holds across a level reload. False for null. Game
+// thread.
+bool IsDroneSack(void* actor);
+
+// Writes takenByDrone = true on a sack, so its destroy handler takes the no-respawn branch. The
+// offset is resolved by name on the actor's class at each call (a sack destroy is rare); when it
+// does not resolve, nothing is written, one warning is logged and the result is false. Game thread.
+bool MarkSackTakenByDrone(void* actor);
+
 }  // namespace ue_wrap::drone

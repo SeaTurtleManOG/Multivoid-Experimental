@@ -6,6 +6,8 @@
 #include "coop/dev/director/director.h"   // PlayerContext -- where the local body is
 #include "coop/net/session.h"
 #include "coop/props/container_contents_sync.h"
+#include "coop/props/container_custody.h"   // the personal-store refusal check
+#include "ue_wrap/actors/inventory.h"       // ResolveLivePersonalInventoryComponent
 
 #include "ue_wrap/core/log.h"
 #include "ue_wrap/core/reflection.h"
@@ -55,6 +57,10 @@ uint64_t ClientFireMs() {
     }();
     return ms;
 }
+
+// The personal-inventory check prints once per session, not once per process: a reconnect is a new world and a new
+// personal store.
+bool g_saidA5 = false;
 
 uint64_t g_connectedAtMs = 0;
 uint64_t g_nextDigestMs  = 0;
@@ -219,6 +225,27 @@ void Tick() {
                 static_cast<unsigned long long>(kHostFireMs),
                 static_cast<unsigned long long>(ClientFireMs()));
     }
+    // The personal-inventory check, once per session. The claim it falsifies is the one that matters most about the
+    // custody park: that a mechanism which writes GObjStack slices can never be aimed at the
+    // player's own inventory. It asks the SHIPPED predicate, on the RUNNING build, rather than
+    // restating the argument -- and a line reading `wouldPark=YES` is the check failing, loudly, in
+    // the log.
+    if (!g_saidA5) {
+        g_saidA5 = true;
+        void* personal = ue_wrap::inventory::ResolveLivePersonalInventoryComponent();
+        if (!personal) {
+            UE_LOGW("[CUSTODY-A5] the live personal inventory component did not resolve -- arm A5 "
+                    "is INCONCLUSIVE on this run, not passed");
+        } else {
+            coop::props::container_custody::Reason why =
+                coop::props::container_custody::Reason::Applied;
+            const bool would =
+                coop::props::container_custody::WouldParkForInventory(personal, why);
+            UE_LOGI("[CUSTODY-A5] personal inventory component=%p wouldPark=%s reason=%s",
+                    personal, would ? "YES" : "NO",
+                    coop::props::container_custody::ReasonText(why));
+        }
+    }
     if (!ResolveTargets()) return;
 
     const bool host = s->role() == coop::net::Role::Host;
@@ -243,6 +270,7 @@ void OnDisconnect() {
     g_connectedAtMs = 0;
     g_nextDigestMs = 0;
     g_fired = false;
+    g_saidA5 = false;
     g_verdictDone = false;
     g_verdictAtMs = 0;
     g_fireBefore = g_fireAfter = -1;

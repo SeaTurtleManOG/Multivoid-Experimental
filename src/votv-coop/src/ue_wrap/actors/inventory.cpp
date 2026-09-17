@@ -135,24 +135,29 @@ bool ReadAll(PlayerInventory& out) {
     return true;
 }
 
-bool ReadLivePersonalStore(LivePersonalStore& out) {
-    out.slotIndex = -1;
-    out.records.clear();
+namespace {
 
+// gamemode -> playerContainer -> propInventory, with the fail-closed `Player == true` address
+// assertion. ONE implementation of the walk: ReadLivePersonalStore and the public component
+// accessor both come through here, so a predicate can never be asking about a different component
+// than the reader reads. `outSave` returns the resolved saveSlot, which the reader needs and the
+// accessor does not.
+void* ResolvePersonalInv_(void** outSave) {
     void* save = ResolveSaveSlot();   // also refreshes g_gm (and revalidates it via IsLive)
-    if (!save || !g_gm.Raw()) return false;
+    if (!save || !g_gm.Raw()) return nullptr;
+    if (outSave) *outSave = save;
 
-    if (CachedOffset(g_offPlayerContainer, R::ClassOf(g_gm.Raw()), L"playerContainer") < 0) return false;
+    if (CachedOffset(g_offPlayerContainer, R::ClassOf(g_gm.Raw()), L"playerContainer") < 0) return nullptr;
     void* pc = ReadAt<void*>(g_gm.Raw(), g_offPlayerContainer);
-    if (!pc || !SR::PlausibleObjPtr(pc) || !R::IsLive(pc)) return false;
+    if (!pc || !SR::PlausibleObjPtr(pc) || !R::IsLive(pc)) return nullptr;
 
-    if (CachedOffset(g_offContainerPropInv, R::ClassOf(pc), L"propInventory") < 0) return false;
+    if (CachedOffset(g_offContainerPropInv, R::ClassOf(pc), L"propInventory") < 0) return nullptr;
     void* inv = ReadAt<void*>(pc, g_offContainerPropInv);
-    if (!inv || !SR::PlausibleObjPtr(inv) || !R::IsLive(inv)) return false;
+    if (!inv || !SR::PlausibleObjPtr(inv) || !R::IsLive(inv)) return nullptr;
 
     // ADDRESS ASSERTION (fail-closed): this must be the PERSONAL store and nothing else. Same flag
     // that container_contents_sync's BOUNDARY 1 refuses on -- opposite sides of one boundary.
-    if (CachedOffset(g_offInvPlayer, R::ClassOf(inv), L"Player") < 0) return false;
+    if (CachedOffset(g_offInvPlayer, R::ClassOf(inv), L"Player") < 0) return nullptr;
     if (ReadAt<uint8_t>(inv, g_offInvPlayer) == 0) {
         static bool s_warned = false;
         if (!s_warned) {
@@ -161,8 +166,22 @@ bool ReadLivePersonalStore(LivePersonalStore& out) {
                     "-- refusing to read it as the live personal store. Expected player=True from "
                     "the class's component template; something resolved to the wrong container.");
         }
-        return false;
+        return nullptr;
     }
+    return inv;
+}
+
+}  // namespace
+
+void* ResolveLivePersonalInventoryComponent() { return ResolvePersonalInv_(nullptr); }
+
+bool ReadLivePersonalStore(LivePersonalStore& out) {
+    out.slotIndex = -1;
+    out.records.clear();
+
+    void* save = nullptr;
+    void* inv = ResolvePersonalInv_(&save);
+    if (!inv || !save) return false;
 
     if (CachedOffset(g_offInvIndex, R::ClassOf(inv), L"Index") < 0) return false;
     const int32_t idx = ReadAt<int32_t>(inv, g_offInvIndex);

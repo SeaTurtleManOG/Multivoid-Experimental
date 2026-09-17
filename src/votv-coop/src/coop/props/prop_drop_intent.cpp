@@ -11,6 +11,9 @@
 #include "coop/props/prop_save_data.h"
 #include "coop/props/prop_element_tracker.h"// GetPropElementIdForActor, ResolveLiveActorByKey   
 #include "coop/props/container_contents_sync.h"  // TakeObjInFlight -- mark a container-extraction birth
+#include "coop/props/container_custody.h"        // the container custody ARM
+#include "coop/props/place_queue_admission.h"   // ClassifyPlaceQueueArrival -- the pending-place cap policy
+#include "coop/props/drive_place_authorship.h"   // NotesDrivePayloadAuthorship -- the drive-birth note policy
 #include "coop/session/world_load_episode.h"  // InEpisode (quiet during the join loadObjects churn)
 #include "ue_wrap/core/call.h"                   // ParamFrame + Call (setKey on the host re-spawn)
 #include "ue_wrap/engine/engine.h"                 // BeginDeferredSpawn/FinishDeferredSpawn/SetActorScale3D
@@ -30,6 +33,7 @@
 #include "ue_wrap/core/types.h"
 #include "ue_wrap/core/ufunction_hook.h"         // InstallPostHook (chains after host_spawn_watcher's)
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <deque>
@@ -141,15 +145,61 @@ void OnClientFinishSpawn(void* /*context*/, void* /*srcObj*/, void* result) {
     // authoritative one, the host spawn watcher's proven shape). The hand-axis test also covers
     // remote display mirrors.
     if (coop::hand_item::IsHandAxisActor(actor)) return;
-    if (g_pending.size() >= kMaxPending) {
-        UE_LOGW("[PROP-DROP] client pending-place cap %zu hit -- dropping %p", kMaxPending, actor);
-        coop::dev::prop_birth_key_probe::NotePendingCapHit(actor);
-        return;
-    }
     // Was a container extraction in flight when this actor spawned? The extracted item's actor
     // materialises inside the take call, so the latch is live exactly here. Marks the entry as a
     // container-extraction birth, admitted at drain.
+    //
+    // The read CONSUMES the latch, so it is sampled exactly ONCE per arrival, and the sample now
+    // happens BEFORE the capacity test rather than after it: every path from here on carries the
+    // value, into the entry on an admission and into the warning on a refusal. Sampling it after
+    // a refusal returned would have been the same bug in the other direction -- the latch would
+    // stay armed and mark the NEXT unrelated spawn as an extraction birth.
     const bool fromContainerExtract = coop::props::container_contents_sync::TakeObjInFlight();
+    // Admission against the absolute 32 bound (see coop/props/place_queue_admission.h). The drain's
+    // authoring gate below (the `!parked && !freshBirth && !e.containerExtract` continue in Tick)
+    // passes a parked entry, a whitelisted fresh birth, or a container extraction, and only the last
+    // of those is knowable here. It is one gate, not the whole drain: the liveness, tracked-eid,
+    // echo, hand-axis and key-restore filters ahead of it all drop or re-defer an entry without ever
+    // reading containerExtract, so the latch settles that gate and nothing else -- an extraction
+    // entry whose key never restores within kMaxKeyTries still authors nothing. At a full queue an
+    // extraction arrival may take the slot of the oldest occupant that does NOT carry the latch:
+    // both must clear the same five filters, and only the occupant must then also be found parked or
+    // whitelisted, so the trade swaps a strictly weaker authorship claim for a strictly stronger one
+    // -- dominance, not certainty. The bound itself never moves. Eviction is an explicit deviation
+    // from the reserve this fix was first specified as; the header states the deviation, the
+    // comparison that motivates it and the loss it accepts.
+    const auto oldestIneligible = std::find_if(
+        g_pending.begin(), g_pending.end(),
+        [](const PendingPlace& e) { return !e.containerExtract; });
+    switch (ClassifyPlaceQueueArrival(g_pending.size(), kMaxPending, fromContainerExtract,
+                                      oldestIneligible != g_pending.end())) {
+        case PlaceQueueAdmission::Refuse:
+            // Log tooling note: the prefix through "-- dropping %p" is the pre-existing signature
+            // (179 occurrences in the reference player log) and still renders byte-identically for
+            // a latch-less arrival, but the line is no longer a whole-line constant: a refused
+            // extraction birth appends " (container-EXTRACT birth)". A matcher anchored on the
+            // whole line has to accept that variant, or it will undercount refusals.
+            UE_LOGW("[PROP-DROP] client pending-place cap %zu hit -- dropping %p%s", kMaxPending,
+                    actor, fromContainerExtract ? " (container-EXTRACT birth)" : "");
+            coop::dev::prop_birth_key_probe::NotePendingCapHit(actor);
+            return;
+        case PlaceQueueAdmission::AdmitByEviction:
+            // tries= is the evicted entry's drain re-defer count, not its age: it stays 0 unless
+            // the drain has already run over it and found its key unrestored, so a same-tick burst
+            // evicts entries reading tries=0. A 0 there does not mean the entry was cheap to drop.
+            UE_LOGW("[PROP-DROP] client pending-place cap %zu hit -- evicting oldest non-extract "
+                    "pending entry actor=%p tries=%d to admit container-EXTRACT birth actor=%p",
+                    kMaxPending, oldestIneligible->actor, oldestIneligible->tries, actor);
+            // The evicted entry was enqueued and is now leaving without a drain, so it is an exit:
+            // without this the probe's enqueues stop balancing against its exits.
+            coop::dev::prop_birth_key_probe::NoteDrainExit(
+                oldestIneligible->actor, "evicted-for-container-extract", oldestIneligible->tries,
+                std::wstring());
+            g_pending.erase(oldestIneligible);
+            break;
+        case PlaceQueueAdmission::Admit:
+            break;
+    }
     if (coop::dev::prop_birth_key_probe::IsEnabled()) {
         // The seam reading the probe exists for: is the Key there before any drain tick waits?
         coop::dev::prop_birth_key_probe::NoteEnqueue(
@@ -373,12 +423,24 @@ void Tick(coop::net::Session* session) {
             // disc that has already come to rest during the key wait still crosses asleep, which
             // is where it is.
             if (!isDiscBirth) p.physFlags |= pf::kSleep;
-            // A locally born drive carries its payload in its data slot: note the authorship, so
-            // the drive sync broadcasts it at adoption (the first eid sight); un-noted first sights
-            // stay prime-only.
-            if (ue_wrap::drive_chain::IsDriveClass(R::ClassOf(e.actor)))
-                coop::drive_sync::NoteLocalDriveBirth(e.actor);
         }
+        // A drive carries its recorded row in data_0 and this intent has no field for it. The save
+        // record published below skips drives (drive_sync declares prop_drive_C as its own), so the
+        // row can only ride the DrivePayload lane -- and that lane emits for a first-sighted eid
+        // only when this peer NOTED the birth. Note it for EVERY drive-class place this client
+        // authors: the PARKED pickup-then-place and the container extract too, not just the
+        // unparked rack-take birth. Otherwise the host's authoritative respawn mints a CDO-default
+        // (blank) row and broadcasts that as truth -- the same hazard the save record below
+        // answers on both arms for the classes it covers. Policy in
+        // coop/props/drive_place_authorship.h, so the shipped policy is the tested one.
+        //
+        // EnsureResolved() must be called here explicitly. Inside the old freshBirth block it was
+        // reached only as a side effect of evaluating `freshBirth`, whose `!parked` term short-
+        // circuits the whole expression away on a parked place -- precisely the case being fixed.
+        if (ue_wrap::drive_chain::EnsureResolved() &&
+            NotesDrivePayloadAuthorship(ue_wrap::drive_chain::IsDriveClass(R::ClassOf(e.actor)),
+                                        freshBirth))
+            coop::drive_sync::NoteLocalDriveBirth(e.actor);
         const auto loc = ue_wrap::engine::GetActorLocation(e.actor);
         const auto rot = ue_wrap::engine::GetActorRotation(e.actor);
         const auto scl = ue_wrap::engine::GetActorScale3D(e.actor);
@@ -442,6 +504,14 @@ void OnPropDropIntent(coop::net::Session& session, const coop::net::PropDropInte
         UE_LOGI("[PROP-DROP] HOST spawned client-placed prop key='%ls' cls='%ls' slot=%u at (%.1f,%.1f,%.1f) "
                 "-- FinishSpawn watcher broadcasts it this tick",
                 key.c_str(), cls.c_str(), senderSlot, p.locX, p.locY, p.locZ);
+        // The container custody ARM. HERE, once HostSpawnPlacedProp has returned a live actor. There is no
+        // element id at this statement yet (the host's FinishSpawn callback only ENQUEUES --
+        // host_spawn_watcher.h -- and DrainPendingSpawns adopts on the next tick, which is where
+        // the eid is minted and where the custody Tick consumes). senderSlot reached us already
+        // range-checked to [1, kMaxPeers) in event_dispatch_intent.cpp's PropDropIntent case, so
+        // the arm inherits that check for free.
+        coop::props::container_custody::NoteHostSpawnForIntent(actor, key, cls,
+                                                               static_cast<int>(senderSlot));
     }
 }
 

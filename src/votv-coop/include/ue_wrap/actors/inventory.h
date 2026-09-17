@@ -86,6 +86,17 @@ struct LivePersonalStore {
 // reads them.
 bool ReadLivePersonalStore(LivePersonalStore& out);
 
+// The same walk, stopping one step earlier: the live propInventory_C COMPONENT itself, for a
+// predicate that wants to ask a question ABOUT it rather than read its contents. Null on any
+// unresolvable step and on `Player == 0` -- the same fail-closed address assertion, because it is
+// literally the same walk.
+//
+// This preserves the READ-ONLY BY CONSTRUCTION rule three lines above rather than bending it: it
+// hands back a pointer for a predicate to INSPECT, and the predicate it exists for --
+// container_custody::WouldParkForInventory, the personal-inventory check, under the shipped
+// container_selftest=1 gate -- reaches no writer. There is still no live-store writer here.
+void* ResolveLivePersonalInventoryComponent();
+
 // The WRITE side: the apply on join.
 //
 // Overwrite the player-scoped arrays (inventoryData, equipment, hold) on `saveSlot` with

@@ -17,8 +17,10 @@
 #pragma once
 
 #include "coop/net/protocol.h"
+#include "ue_wrap/actors/save_record.h"  // SaveRecord (POD) -- the custody seams below trade in it
 
 #include <cstdint>
+#include <vector>
 
 namespace coop::net { class Session; }
 
@@ -75,5 +77,65 @@ bool VerbWatchEntered();
 // engine reports. Both peers print it; the smoke compares the numbers. False if the eid is not a
 // live world container here.
 bool ContentsDigest(uint32_t eid, int32_t& outCount, float& outVol);
+
+// ---- custody seams (coop/props/container_custody) --------------------------------------------
+// The host-side container custody park reads and writes THIS lane's state: the same Boundary 1, the
+// same GObjStack slot resolve, the same record codec, the same apply block, the same content hash.
+// Every one of those is in this file's ANONYMOUS namespace (or in container_slice_wire), so reuse
+// needs a public wrapper and never a copy -- "ONE implementation"
+// (coop/items/save_record_wire.h). Each seam below exists for exactly that reason; the only
+// behaviour one of them adds is MarkHostCustodyWrite's bookkeeping, which is the host verb edge's.
+
+// Boundary 1 and the container test, exposed unchanged from this lane's own readers.
+bool IsContainer(void* actor);
+bool IsWorldContainer(void* inv);
+void* InventoryOfContainer(void* containerActor);
+
+// A nested-container record, by the same class walk the wire path uses.
+bool IsNestedContainerRecord(const ue_wrap::save_record::SaveRecord& r);
+
+// Read a world container's slice. neuterNested=false is the HOST-LOCAL path: a park keeps the same
+// host's GObjStack, so a nested container's ints[0][0] is still valid and neutering it would
+// silently empty every nested container on re-attach. The wire path keeps the default.
+bool ReadWorldContainerRecords(void* actor, std::vector<ue_wrap::save_record::SaveRecord>& out,
+                               bool neuterNested);
+
+// The raw-write block: AllocZeroed, WriteSaveRecord, WriteArrHeader. Does NOT run the allocator
+// pre-flight and does NOT re-derive -- both are separate seams so a caller can order them itself.
+bool WriteWorldContainerRecords(void* actor, const std::vector<ue_wrap::save_record::SaveRecord>& r);
+
+// updateVolumesAndMass + recalculateNames, the setter-managed state a raw write leaves stale.
+bool RederiveContainerManagedState(void* actor);
+
+// The index half of the GObjStack slot resolve, with the same two refusals: a negative index and
+// an index past the array. The slot-aliasing rows cannot read the private one.
+bool WorldContainerSlotIndex(void* inv, int32_t& out);
+
+// How many records the component's slot currently holds. -1 is not written; false means the slot
+// did not resolve at all.
+bool WorldContainerRecordCount(void* inv, int32_t& out);
+
+// The current GObjStack length: the same `stack.num` the slot resolve compares against, and the
+// range bound the nested-slot test needs.
+bool GObjStackLength(int32_t& out);
+
+// The size the FAN-OUT pack (container_slice_wire::Pack) would produce for this record set --
+// nested indices NEUTERED, which is what BroadcastContainer refuses on. It can EXCEED the host-local
+// pack, because neutering GROWS an absent ints[] to a one-element array.
+size_t FanoutPackBytes(const std::vector<ue_wrap::save_record::SaveRecord>& recs);
+
+// The content identity every gate and compare-and-swap on this lane uses
+// (container_slice_wire::ContentHash).
+uint64_t ContentsHash(uint32_t eid, const std::vector<ue_wrap::save_record::SaveRecord>& recs);
+
+// Host: the custody consume just raw-wrote this container. Recorded exactly as the host's own
+// addObject/takeObj verb edge records a mutation: the eid is marked dirty so the next sweep's
+// DrainDirty fans the contents out through the shipped lane (and BroadcastContainer's
+// NotePublished moves the write policy's baseline), the change is stamped through
+// container_write_policy::NoteLocalChange so ANY client slice for this container inside the conflict
+// window (not only one racing the write) is refused HostChangeInFlight and answered with the host's
+// truth, as after a host verb edge, and the applied hash is dropped.
+// Host-only, like the stamp it makes.
+void MarkHostCustodyWrite(uint32_t eid);
 
 }  // namespace coop::props::container_contents_sync

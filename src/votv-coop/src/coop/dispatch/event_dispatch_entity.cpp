@@ -20,6 +20,7 @@
 #include "coop/player/players_registry.h"
 #include "coop/world/world_actor_sync.h"  // the world-actor mirror receivers
 #include "coop/creatures/piramid_sync.h"      // the PyramidGather receiver
+#include "coop/props/container_custody.h"   // custody park: the destroy's author-slot latch
 #include "coop/props/prop_save_data.h"    // the per-prop save record lane
 #include "coop/props/prop_stick_sync.h"
 #include "coop/props/prop_drive_stream.h"  // the driven-prop end edge
@@ -255,6 +256,15 @@ bool HandleEntityEvent(net::Session& session,
                 dkey.push_back(static_cast<wchar_t>(static_cast<unsigned char>(p.key.data[i])));
             coop::trash_pile_sync::NotifyWireDestroy(dkey);
         }
+        // Custody park. PropDestroyPayload carries no sender field and remote_prop::OnDestroy takes
+        // none, so this is the ONLY scope that knows which peer authored this destroy -- and the
+        // host-side custody capture, several frames of call stack below, has to bind it. A SCOPE
+        // GUARD, not a bare set: OnDestroyImpl_ returns before the capture on several paths (the
+        // trash-mirror retire, an unresolved actor, a deferred apply), and a latch that outlives its
+        // message would let the NEXT destroy park under this one's author. The seam range-checks
+        // msg.senderPeerSlot itself, exactly as the PropRelease case above does; an out-of-range
+        // value clears the latch and the capture then refuses author-unknown.
+        coop::props::container_custody::ScopedInboundDestroySlot _custodySlot(msg.senderPeerSlot);
         remote_prop::OnDestroy(p, localPlayer);
         break;
     }

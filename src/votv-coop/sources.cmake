@@ -340,6 +340,7 @@ set(VOTVCOOP_SOURCES
     src/coop/items/inventory_wire.cpp
     src/coop/items/save_record_wire.cpp
     src/coop/props/container_contents_sync.cpp
+    src/coop/props/container_custody.cpp
     src/coop/props/container_park.cpp
     src/coop/props/container_slice_wire.cpp
     src/coop/props/container_write_policy.cpp

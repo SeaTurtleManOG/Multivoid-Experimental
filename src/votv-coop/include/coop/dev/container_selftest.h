@@ -29,6 +29,9 @@ void Install(coop::net::Session* session);
 
 // Game thread, per tick. Drives the two scheduled dispatches and the 5s digest. No-op with the
 // flag off, before the session connects, or once both dispatches have fired.
+// Once per session it also logs whether the custody park would take the LIVE PERSONAL INVENTORY
+// (the one component that mechanism must never touch) and the refusal reason. That is a read-only
+// predicate under the same flag: no dispatch, no write path.
 void Tick();
 
 // Clear the schedule + the resolved containers so a reconnect re-runs the circle.

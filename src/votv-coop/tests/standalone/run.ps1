@@ -126,6 +126,63 @@ try {
     Invoke-Case 'candidate_01-fixed' $IncludeRoot `
         @((Join-Path $TestRoot 'candidate_01_param_frame_boundary.cpp'), $Call) 'pass'
 
+    # candidate_08 -- both arms across coop/props/place_queue_admission.h. The pre-fix fallback
+    # tests capacity alone, ahead of any eligibility sample, so eligibility is not a term in the
+    # decision: that is what the fixed policy changed and what the pre-fix arm must fail on.
+    Invoke-Case 'candidate_08-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_08_place_queue_admission.cpp')) 'pass'
+    $Pre08 = New-PreFixIncludeRoot 'candidate_08' @('coop\props\place_queue_admission.h')
+    Write-Output $Pre08.Note
+    Invoke-Case 'candidate_08-prefix' $Pre08.Root `
+        @((Join-Path $TestRoot 'candidate_08_place_queue_admission.cpp')) 'fail'
+
+    # candidate_12 -- both arms across coop/props/drive_place_authorship.h. The pre-fix fallback is
+    # `isDriveClass && freshBirth`, which is what the note's old position inside `if (freshBirth)`
+    # amounted to.
+    Invoke-Case 'candidate_12-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_12_drive_place_authorship.cpp')) 'pass'
+    $Pre12 = New-PreFixIncludeRoot 'candidate_12' @('coop\props\drive_place_authorship.h')
+    Write-Output $Pre12.Note
+    Invoke-Case 'candidate_12-prefix' $Pre12.Root `
+        @((Join-Path $TestRoot 'candidate_12_drive_place_authorship.cpp')) 'fail'
+
+    # ---- APPENDED (the container custody park). Self-contained; keep at the end of
+    # the case list so a textual conflict with another append resolves mechanically.
+    # candidate_15 -- both arms across coop/props/container_custody.h. The pre-fix fallback in the
+    # test source is an earlier draft of the custody store: the author slot narrowed to uint8_t, no
+    # author-generation binding, no class binding, no arm-once rule, no enrolled-key re-check, no
+    # fresh-empty refusal, an enumeration seam called with no target and no headroom whose
+    # outComplete is ignored, no nested-slot test, no eviction cap, and a consume that drops the map
+    # entry without its FIFO copy. Each of those is a defect found in that draft.
+    #
+    # This case links the SHIPPED record codec rather than restating it (one implementation, not a copy):
+    # coop/items/save_record_wire.cpp, and coop/interactables/signal_wire.cpp because SerSave defers
+    # signal rows to it. The test TU supplies the single ue_wrap::log::Write those two need.
+    $Wire15 = @(
+        (Join-Path $SourceRoot 'src\coop\items\save_record_wire.cpp'),
+        (Join-Path $SourceRoot 'src\coop\interactables\signal_wire.cpp'))
+    foreach ($W in $Wire15) {
+        if (!(Test-Path -LiteralPath $W)) { throw "candidate_15 source not found: $W" }
+    }
+    Invoke-Case 'candidate_15-fixed' $IncludeRoot `
+        (@((Join-Path $TestRoot 'candidate_15_container_custody.cpp')) + $Wire15) 'pass'
+    $Pre15 = New-PreFixIncludeRoot 'candidate_15' @('coop\props\container_custody.h')
+    Write-Output $Pre15.Note
+    Invoke-Case 'candidate_15-prefix' $Pre15.Root `
+        (@((Join-Path $TestRoot 'candidate_15_container_custody.cpp')) + $Wire15) 'fail'
+
+    # ---- APPENDED (the drone sack respawn policy). Self-contained; keep at the end of the case
+    # list so a textual conflict with another append resolves mechanically.
+    # candidate_16 -- both arms across coop/props/destroy_respawn_policy.h. The pre-fix fallback in
+    # the test source never forces: before the fix no destroy application marked the sack taken, so
+    # a client receiver always ran the sack's own respawn.
+    Invoke-Case 'candidate_16-fixed' $IncludeRoot `
+        @((Join-Path $TestRoot 'candidate_16_destroy_respawn_policy.cpp')) 'pass'
+    $Pre16 = New-PreFixIncludeRoot 'candidate_16' @('coop\props\destroy_respawn_policy.h')
+    Write-Output $Pre16.Note
+    Invoke-Case 'candidate_16-prefix' $Pre16.Root `
+        @((Join-Path $TestRoot 'candidate_16_destroy_respawn_policy.cpp')) 'fail'
+
     # CASES-END (each integration step appends its candidates above this line)
 
     # The file list and the case list must agree: a candidate source nobody registered is

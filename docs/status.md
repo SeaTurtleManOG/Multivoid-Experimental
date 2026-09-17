@@ -88,3 +88,11 @@ opposite: most of its lanes are only built, and the ones that have been played c
 known breaks. True arbiters are rare and listed by name
 (occupancy, the racks, modules, floppy box, the laptop buffer, orders, sleep, containers); everywhere
 else authority is host-authored one way or presser-authored with a host relay.
+
+A world container's contents converge on a late join through the contents lane's own connect
+broadcast -- one slice per live world container, which corrects the join save transfer's snapshot.
+The custody park that carries those contents across a client's take-and-place adds nothing to that
+answer: it is host-local session state, never persisted and never transmitted, and it is cleared
+outright when the author's slot goes quiet, when that slot's occupant changes, when the world
+generation moves, and at session teardown. A joiner therefore sees the containers the host holds,
+not the ones it was mid-carry on.

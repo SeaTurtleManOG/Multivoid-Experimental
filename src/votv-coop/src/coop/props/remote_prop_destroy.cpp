@@ -1,7 +1,8 @@
 // coop/props/remote_prop_destroy.cpp -- the prop-destroy receiver path, one concept: apply a
 // host PropDestroy to this peer. Resolve the doomed local actor (by eid, then key), drain its
 // mirror, then the terminal teardown (clear any kinematic drive, release a local grab,
-// echo-suppress, destroy). Includes the destroy-before-load deferred re-apply (TryApplyDestroy,
+// echo-suppress, keep a client from respawning a drone sack, destroy). Includes the
+// destroy-before-load deferred re-apply (TryApplyDestroy,
 // driven by the quiescence-drain order owner) and the local-consume helpers. The cached
 // destroy UFunction lives here, the destroy concept's own state; the convert path's
 // echo-destroy routes through DestroyEchoSuppressed (remote_prop_internal.h), so that TU
@@ -9,6 +10,7 @@
 // convert paths share it). Game thread only (the event drain and the quiescence sweep); no
 // mutex.
 
+#include "coop/props/container_custody.h"   // the host-side container custody capture
 #include "coop/props/remote_prop.h"
 #include "remote_prop_internal.h"  // impl-private (src-local), NOT under include/
 
@@ -19,7 +21,8 @@
 #include "coop/creatures/kerfur_entity.h"     // ForgetKerfurPropMirror (mirror-teardown choke-point)
 #include "coop/player/players_registry.h"     // players::Registry::Get().Local() (TryApplyDestroy)
 #include "coop/props/prop_echo_suppress.h"    // MarkIncomingDestroy
-#include "coop/props/prop_element_tracker.h"  // ResolveLiveActorByKey
+#include "coop/props/destroy_respawn_policy.h" // ForceNoRespawnOnDestroy (a client's sack respawn)
+#include "coop/props/prop_element_tracker.h"  // ResolveLiveActorByKey, SessionIsClient / SessionIsHost
 #include "coop/props/trash_channel.h"         // ClearClientCarry (a destroyed carried clump)
 #include "coop/props/trash_mirror.h"          // Retire (the trash teardown path)
 #include "ue_wrap/engine/engine.h"                   // ReleaseMainPlayerGrabIfHolding
@@ -27,6 +30,7 @@
 #include "ue_wrap/core/cached_obj_ref.h"
 #include "ue_wrap/core/log.h"
 #include "ue_wrap/actors/prop.h"                     // IsChipPile / IsGarbageClump
+#include "ue_wrap/devices/drone.h"                   // IsDroneSack / MarkSackTakenByDrone
 #include "ue_wrap/core/reflection.h"
 #include "ue_wrap/core/sdk_profile.h"              // P::name::ActorClassName / DestroyActorFn
 
@@ -74,9 +78,35 @@ void UnregisterPropMirror(coop::element::ElementId eid) {
     // drained falls out of scope here; the element destructor unregisters the mirror.
 }
 
+// A client applying a destroy another peer sent must not run the drone sack's own destroy-time
+// respawn. The sack's handler removes it from the game's prop registry and then, unless its
+// takenByDrone flag is set, shows a hint, spawns a new sack at the drone and plays a teleport cue.
+// On a client that new sack is local, known to no other peer: after a drone take no sack should
+// remain anywhere, and any replacement that should exist is the one the host's copy spawns, which
+// reaches this peer as a PropSpawn. So a client marks its copy taken and the class takes its own
+// no-respawn branch; a host keeps the native branch. The role is the element tracker's cached one:
+// this path runs only for a received PropDestroy or its deferred re-apply, whose queue the session
+// teardown clears. Game thread, before the engine destroy call.
+void KeepClientFromRespawningSack_(void* actor, const std::wstring& keyW,
+                                   const coop::net::PropDestroyPayload& payload) {
+    using coop::props::DestroyRole;
+    const DestroyRole role = coop::prop_element_tracker::SessionIsClient() ? DestroyRole::Client
+                             : coop::prop_element_tracker::SessionIsHost() ? DestroyRole::Host
+                                                                           : DestroyRole::NoSession;
+    if (!coop::props::ForceNoRespawnOnDestroy(role, coop::props::DestroyPath::RemoteApply,
+                                              ue_wrap::drone::IsDroneSack(actor))) {
+        return;
+    }
+    if (ue_wrap::drone::MarkSackTakenByDrone(actor)) {
+        UE_LOGI("remote_prop::OnDestroy: key '%ls' eid=%u -- CLIENT marked the drone sack taken, so "
+                "its own respawn is skipped (any replacement that should exist arrives as a PropSpawn)",
+                keyW.c_str(), payload.elementId);
+    }
+}
+
 // The terminal local teardown of a resolved doomed actor, shared by the in-time destroy and
-// the deferred re-apply: clear any drive, release a local grab, echo-suppress, then destroy.
-// Game thread.
+// the deferred re-apply: clear any drive, release a local grab, echo-suppress, unpin a trash
+// mirror, keep a client from respawning a drone sack, then destroy. Game thread.
 void DestroyResolvedLocalActor_(void* actor, const std::wstring& keyW,
                                 const coop::net::PropDestroyPayload& payload, void* localPlayer) {
     if (!ResolveDestroyFn()) {
@@ -102,6 +132,15 @@ void DestroyResolvedLocalActor_(void* actor, const std::wstring& keyW,
     // GC), and a rooted pending-kill actor would leak its object-array slot forever. A harmless
     // no-op on a save-loaded native or a keyed prop.
     coop::trash_mirror::Unpin(actor);
+    // The container custody CAPTURE. Before the engine kills the actor, and the actor is dereferenced live
+    // from the log line above through here. UNCONDITIONAL: the custody gate needs more than this
+    // TU's role read (a connected session and the author-slot latch), so the module holds its own
+    // session pointer and self-gates on role, session and latch. On a client, and on a host whose
+    // destroy was not client-authored, this costs one function call and returns.
+    coop::props::container_custody::CaptureForDyingContainer(actor, keyW);
+    // After the capture and immediately before the engine call, since the sack's destroy handler
+    // reads the flag inside it.
+    KeepClientFromRespawningSack_(actor, keyW, payload);
     R::CallFunction(actor, g_destroyActorFn, nullptr);
 }
 

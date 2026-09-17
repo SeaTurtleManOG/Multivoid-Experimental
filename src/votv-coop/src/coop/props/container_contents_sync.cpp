@@ -241,7 +241,11 @@ bool CarriesForeignIndex(const SR::SaveRecord& r) {
     return !r.ints.empty() && !r.ints[0].empty() && r.ints[0][0] != -1;
 }
 
-bool ReadContents(void* inv, std::vector<SR::SaveRecord>& out) {
+// neuterNested is FALSE only on the HOST-LOCAL custody path (coop/props/container_custody): a park
+// keeps the same host's GObjStack, so a nested container's ints[0][0] is still a valid slot number
+// here and clearing it would silently empty every nested container on re-attach. The wire path
+// takes the default, so nothing on the wire changes.
+bool ReadContents(void* inv, std::vector<SR::SaveRecord>& out, bool neuterNested = true) {
     uint8_t* slot = GObjStackSlot(inv);
     if (!slot) return false;
     const SR::Arr objs = SR::ReadArr(slot, 0);  // struct_mObject.obj @ +0
@@ -255,7 +259,7 @@ bool ReadContents(void* inv, std::vector<SR::SaveRecord>& out) {
     for (int32_t i = 0; i < objs.num; ++i) {
         SR::SaveRecord r;
         SR::ReadSaveRecord(objs.data + static_cast<size_t>(i) * SR::kSaveStride, r);
-        if (RecordIsNestedContainer(r)) NeuterNestedIndex(r);
+        if (neuterNested && RecordIsNestedContainer(r)) NeuterNestedIndex(r);
         out.push_back(std::move(r));
     }
     return true;
@@ -740,6 +744,107 @@ bool ContentsDigest(uint32_t eid, int32_t& outCount, float& outVol) {
     if (CachedOffset(sOffCurrVol, R::ClassOf(inv), L"currVol") >= 0)
         outVol = ReadAt<float>(inv, sOffCurrVol);
     return true;
+}
+
+// ---- custody seams (see the header) -----------------------------------------------------------
+// Public wrappers over this file's own private readers and writers, so coop/props/container_custody
+// REUSES them instead of keeping a second copy.
+
+bool IsContainer(void* actor) { return IsContainerActor(actor); }
+
+bool IsWorldContainer(void* inv) { return IsWorldContainerInventory(inv); }
+
+void* InventoryOfContainer(void* containerActor) {
+    void* inv = InventoryOf(containerActor);
+    return (inv && IsInventoryComponent(inv)) ? inv : nullptr;
+}
+
+bool IsNestedContainerRecord(const SR::SaveRecord& r) { return RecordIsNestedContainer(r); }
+
+bool ReadWorldContainerRecords(void* actor, std::vector<SR::SaveRecord>& out, bool neuterNested) {
+    if (!IsContainerActor(actor)) return false;
+    void* inv = InventoryOfContainer(actor);
+    if (!inv) return false;
+    if (!IsWorldContainerInventory(inv)) return false;   // BOUNDARY 1, fail-closed
+    return ReadContents(inv, out, neuterNested);
+}
+
+bool WriteWorldContainerRecords(void* actor, const std::vector<SR::SaveRecord>& recs) {
+    if (!IsContainerActor(actor)) return false;
+    void* inv = InventoryOfContainer(actor);
+    if (!inv) return false;
+    if (!IsWorldContainerInventory(inv)) return false;   // BOUNDARY 1, fail-closed
+    uint8_t* slot = GObjStackSlot(inv);
+    if (!slot) return false;
+    const int32_t n = static_cast<int32_t>(recs.size());
+    void* buf = SR::AllocZeroed(static_cast<size_t>(n), static_cast<size_t>(SR::kSaveStride));
+    if (!buf && n > 0) return false;
+    for (int32_t i = 0; i < n; ++i)
+        SR::WriteSaveRecord(reinterpret_cast<uint8_t*>(buf) + static_cast<size_t>(i) * SR::kSaveStride,
+                            recs[i]);
+    // The previous buffer is orphaned, the same way ApplyContents and inventory::ApplyToSaveObject
+    // orphan theirs: recursively freeing the nested sub-arrays and minted FStrings is far more
+    // crash-prone than a bounded leak, and the engine never double-frees a buffer it has lost.
+    SR::WriteArrHeader(slot, 0, buf, n);
+    return true;
+}
+
+bool RederiveContainerManagedState(void* actor) {
+    void* inv = InventoryOfContainer(actor);
+    if (!inv) return false;
+    RederiveManagedState(OwnerOf(inv), inv);
+    return true;
+}
+
+bool WorldContainerSlotIndex(void* inv, int32_t& out) {
+    if (!inv) return false;
+    void* save = ue_wrap::inventory::ResolveSaveSlot();
+    if (!save) return false;
+    if (CachedOffset(g_offGObjStack, R::ClassOf(save), L"GObjStack") < 0) return false;
+    if (CachedOffset(g_offInvIndex, R::ClassOf(inv), L"Index") < 0) return false;
+    const int32_t idx = ReadAt<int32_t>(inv, g_offInvIndex);
+    if (idx < 0) return false;                                  // -1 = never initialised
+    if (idx >= SR::ReadArr(save, g_offGObjStack).num) return false;
+    out = idx;
+    return true;
+}
+
+bool WorldContainerRecordCount(void* inv, int32_t& out) {
+    uint8_t* slot = GObjStackSlot(inv);
+    if (!slot) return false;
+    out = SR::ReadArr(slot, 0).num;
+    return true;
+}
+
+bool GObjStackLength(int32_t& out) {
+    void* save = ue_wrap::inventory::ResolveSaveSlot();
+    if (!save) return false;
+    if (CachedOffset(g_offGObjStack, R::ClassOf(save), L"GObjStack") < 0) return false;
+    out = SR::ReadArr(save, g_offGObjStack).num;
+    return true;
+}
+
+size_t FanoutPackBytes(const std::vector<SR::SaveRecord>& recs) {
+    std::vector<SR::SaveRecord> neutered = recs;
+    for (auto& r : neutered) {
+        if (RecordIsNestedContainer(r)) NeuterNestedIndex(r);
+    }
+    // eid and baseHash do not change the length: both are fixed-width.
+    return cw::Pack(0, 0, neutered).size();
+}
+
+uint64_t ContentsHash(uint32_t eid, const std::vector<SR::SaveRecord>& recs) {
+    return cw::ContentHash(eid, recs);
+}
+
+void MarkHostCustodyWrite(uint32_t eid) {
+    if (eid == 0 || eid == static_cast<uint32_t>(coop::element::kInvalidId)) return;
+    if (!IsHost()) return;
+    // The host verb edge's three statements (OnVerbEntry), for a mutation that did not come through
+    // the verb: dirty for the fan-out, the conflict-window stamp, and the applied hash dropped.
+    g_dirty.insert(eid);
+    wp::NoteLocalChange(eid, NowMs());
+    g_appliedHash.erase(eid);
 }
 
 void OnDisconnect() {
